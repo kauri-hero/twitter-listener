@@ -1,0 +1,27 @@
+# Brand Listener Configuration
+brand:
+  handles: ["Send"]
+  keywords: ["sendit", "send.it"]
+
+filters:
+  lang: "en"
+  include_replies: true
+  include_quotes: true
+
+image:
+  backend: "gcp-vision"  # or "clip-onnx"
+  logoThreshold: 0.80
+  clipThreshold: 0.32
+
+notify:
+  slack_channel: "#social"
+
+thresholds:
+  notify: 0.80
+  log_only: 0.60
+
+sheet:
+  spreadsheetId: "1FWXaMfO0p_LEdsjDT1YVaokq2MAndeLfDStuGCLUizY"
+
+state:
+  storage: "sheet"  # or "file"

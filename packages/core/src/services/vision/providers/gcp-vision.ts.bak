@@ -1,0 +1,92 @@
+import { ImageAnnotatorClient } from '@google-cloud/vision';
+import type { VisionProvider, VisionResult, GCPVisionResult, LogoAnnotation, LabelAnnotation } from '../types.js';
+
+export class GCPVisionProvider implements VisionProvider {
+  private client: ImageAnnotatorClient;
+  private brandKeywords: Set<string>;
+
+  constructor(brandKeywords: string[]) {
+    this.client = new ImageAnnotatorClient();
+    this.brandKeywords = new Set(brandKeywords.map(k => k.toLowerCase()));
+  }
+
+  async analyzeImage(imageUrl: string, brandKeywords: string[]): Promise<VisionResult> {
+    this.brandKeywords = new Set(brandKeywords.map(k => k.toLowerCase()));
+
+    try {
+      const [logoResult] = await this.client.logoDetection({ image: { source: { imageUri: imageUrl } } });
+      const [labelResult] = await this.client.labelDetection({ image: { source: { imageUri: imageUrl } } });
+
+      const gcpResult: GCPVisionResult = {
+        logoMatch: false,
+        confidence: 0,
+        logoAnnotations: (logoResult.logoAnnotations || [])
+          .filter(a => a.description && a.score !== null && a.score !== undefined)
+          .map(a => ({
+            description: a.description!,
+            score: a.score!,
+            boundingPoly: a.boundingPoly ? {
+              vertices: (a.boundingPoly.vertices || []).map(v => ({
+                x: v.x || 0,
+                y: v.y || 0
+              }))
+            } : undefined
+          })),
+        labelAnnotations: (labelResult.labelAnnotations || [])
+          .filter(a => a.description && a.score !== null && a.score !== undefined)
+          .map(a => ({
+            description: a.description!,
+            score: a.score!,
+            mid: a.mid || ''
+          }))
+      };
+
+      return this.processGCPResult(gcpResult);
+    } catch (error) {
+      console.error('GCP Vision API error:', error);
+      return {
+        logoMatch: false,
+        confidence: 0,
+        labels: [],
+        explanations: []
+      };
+    }
+  }
+
+  private processGCPResult(result: GCPVisionResult): VisionResult {
+    const labels: string[] = [];
+    const explanations: string[] = [];
+    
+    let logoMatch = false;
+    let maxConfidence = 0;
+
+    // Check logo annotations for brand matches
+    for (const logo of result.logoAnnotations) {
+      const logoDesc = logo.description.toLowerCase();
+      if (this.brandKeywords.has(logoDesc)) {
+        logoMatch = true;
+        maxConfidence = Math.max(maxConfidence, logo.score);
+        explanations.push(`Logo detected: ${logo.description} (${(logo.score * 100).toFixed(1)}%)`);
+      }
+      labels.push(logo.description);
+    }
+
+    // Check label annotations for brand-related content
+    for (const label of result.labelAnnotations) {
+      const labelDesc = label.description.toLowerCase();
+      if (this.brandKeywords.has(labelDesc)) {
+        logoMatch = true;
+        maxConfidence = Math.max(maxConfidence, label.score);
+        explanations.push(`Label detected: ${label.description} (${(label.score * 100).toFixed(1)}%)`);
+      }
+      labels.push(label.description);
+    }
+
+    return {
+      logoMatch,
+      confidence: maxConfidence,
+      labels: [...new Set(labels)], // Remove duplicates
+      explanations
+    };
+  }
+}
