@@ -1,11 +1,16 @@
 {
     "compilerOptions": {
-      "target": "ES2022", // the target JS version
-      "module": "preserve", // the module code generation
-      "moduleResolution": "bundler", // the module resolution strategy
+      "target": "ES2022",
+      "module": "ESNext",
+      "moduleResolution": "bundler",
       "outDir": "dist",
       "declaration": true,
       "sourceMap": true,
-      "verbatimModuleSyntax": true
+      "strict": true,
+      "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "incremental": true
     }
   }
