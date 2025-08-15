@@ -60,7 +60,7 @@ jobs:
           echo "Node version: $(node --version)"
           echo "Pnpm version: $(pnpm --version)"
           echo ""
-          node dist/main.js
+          npx tsx src/main.ts
 
       - name: Upload logs on failure
         if: failure()
