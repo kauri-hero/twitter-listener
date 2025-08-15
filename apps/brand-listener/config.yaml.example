@@ -1,5 +1,6 @@
 # Brand Listener Configuration Template
 # Copy this file to config.yaml and customize for your brand
+# Uses Twitter API .io for data access
 
 brand:
   handles: ["yourbrand", "yourcompany"]  # Twitter handles to monitor (without @)

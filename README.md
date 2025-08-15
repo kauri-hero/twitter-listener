@@ -90,21 +90,24 @@ Commit your changes and push to GitHub. The system will automatically run every 
 
 ## 🔐 Authentication Setup
 
-### Twitter API Setup
+### Twitter API .io Setup
 
-1. **Create Twitter Developer Account**
-   - Go to [developer.twitter.com](https://developer.twitter.com/)
-   - Apply for developer access
-   - Create a new app
+1. **Create Twitter API .io Account**
+   - Go to [twitterapi.io](https://twitterapi.io/)
+   - Sign up for an account
+   - Choose a plan that fits your monitoring needs
 
-2. **Generate API Keys**
-   - Navigate to your app's "Keys and tokens" section
-   - Generate "Consumer Keys" 
-   - Copy the **API Key** (this is your `TWITTER_API_KEY`)
+2. **Generate API Key**
+   - Navigate to your dashboard
+   - Copy your **API Key** (this is your `TWITTER_API_KEY`)
+   - No complex OAuth setup required!
 
-3. **Set API Access Level**
-   - Ensure your app has "Read" permissions
-   - For keyword searches, ensure you have "Academic Research" or "Pro" access
+3. **Why Twitter API .io?**
+   - **Simplified Setup**: No complex OAuth or Twitter Developer approval needed
+   - **Reliable Access**: Consistent data access without API v2 migration issues
+   - **Better Rate Limits**: More predictable and generous rate limiting
+   - **Real-time Data**: Direct access to mentions and search results
+   - **Cost-Effective**: More affordable than Twitter's enterprise pricing
 
 ### Google Cloud Setup
 
@@ -164,8 +167,8 @@ Commit your changes and push to GitHub. The system will automatically run every 
 Create a `.env` file for local development:
 
 ```bash
-# Twitter API
-TWITTER_API_KEY=your_twitter_api_key_here
+# Twitter API .io
+TWITTER_API_KEY=your_twitterapi_io_api_key_here
 
 # Slack Integration  
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
@@ -210,7 +213,7 @@ Set up the following secrets in your GitHub repository (Settings → Secrets and
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
-| `TWITTER_API_KEY` | Your Twitter API Bearer Token | `AAAAAAAAAAAAAAAAAAAAAMLheAAAAAAA0%2BuSeid...` |
+| `TWITTER_API_KEY` | Your Twitter API .io API Key | `your-api-key-from-twitterapi-io` |
 | `SLACK_WEBHOOK_URL` | Slack incoming webhook URL | `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX` |
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Service account JSON (minified) | `{"type":"service_account","project_id":"your-project"...}` |
 | `GOOGLE_PROJECT_ID` | Your Google Cloud project ID | `your-brand-listener-project` |
@@ -288,7 +291,7 @@ Edit `.github/workflows/brand-listener.yml`:
 
 ```yaml
 on:
-  schedule:
+schedule:
     # Run every 2 hours
     - cron: "0 */2 * * *"
     # Run daily at 9 AM UTC
@@ -367,14 +370,14 @@ View full report: [Google Sheet Link]
 2. Grant "Editor" permissions
 3. Verify the spreadsheet ID in your config is correct
 
-#### "Rate limit exceeded" from Twitter
+#### "Rate limit exceeded" from Twitter API .io
 
-**Problem**: Twitter API rate limits reached.
+**Problem**: Twitter API .io rate limits reached.
 
 **Solution**:
 1. Reduce the `time_range_hours` in your config
 2. Use more specific keywords to reduce volume
-3. Consider upgrading your Twitter API access level
+3. Consider upgrading your Twitter API .io plan for higher limits
 
 #### "GitHub Actions workflow fails"
 
@@ -442,7 +445,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🌟 Acknowledgments
 
-- Twitter API for social media data access
+- Twitter API .io for reliable social media data access
 - Google Sheets API for data storage
 - Slack API for real-time notifications
 - GitHub Actions for reliable automation

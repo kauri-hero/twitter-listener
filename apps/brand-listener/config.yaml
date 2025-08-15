@@ -5,7 +5,7 @@ brand:
 
 filters:
   lang: "en"  # Language filter for tweets
-  time_range_hours: 2 # How many hours back to search (start small for testing)
+  time_range_hours: 6 # How many hours back to search
 
 notify:
   slack_channel: "#social"  # Slack channel for notifications

@@ -49,8 +49,8 @@ if [ ! -f ".env" ]; then
         echo "✅ Created .env file from template"
     else
         cat > .env << EOL
-# Twitter API Configuration
-TWITTER_API_KEY=your_twitter_api_key_here
+# Twitter API .io Configuration
+TWITTER_API_KEY=your_twitterapi_io_api_key_here
 
 # Slack Integration
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
@@ -113,7 +113,7 @@ echo ""
 echo "📋 Next Steps:"
 echo ""
 echo "1. 🔑 Set up authentication:"
-echo "   • Get Twitter API key: https://developer.twitter.com/"
+echo "   • Get Twitter API .io key: https://twitterapi.io/"
 echo "   • Set up Google Cloud: https://console.cloud.google.com/"
 echo "   • Create Slack webhook: https://api.slack.com/apps"
 echo ""

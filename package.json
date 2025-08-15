@@ -1,7 +1,7 @@
 {
   "name": "brand-listener-workspace",
   "version": "1.0.0",
-  "description": "AI-powered social media monitoring system that tracks brand mentions and keywords across Twitter",
+  "description": "AI-powered social media monitoring system that tracks brand mentions and keywords using Twitter API .io",
   "private": true,
   "repository": {
     "type": "git",
