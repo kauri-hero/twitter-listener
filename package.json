@@ -22,7 +22,8 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "clean": "turbo clean",
-    "test": "turbo test"
+    "test": "turbo test",
+    "verify": "./scripts/verify-setup.sh"
   },
   "packageManager": "pnpm@10.13.1",
   "dependencies": {

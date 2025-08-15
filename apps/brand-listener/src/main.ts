@@ -8,14 +8,17 @@ import { TweetProcessor } from '@brand-listener/core/processing';
 import { SlackSink } from '@brand-listener/core/sinks';
 import { SheetsSink } from '@brand-listener/core/sinks/sheets';
 
-// Load .env file only when not in GitHub Actions
-if (process.env.NODE_ENV !== 'production') {
-  config({ path: '../../.env' });
-}
-
-
-
 const logger = new Logger({ prefix: 'BrandListener' });
+
+// Load .env file for local development
+if (!process.env.GITHUB_ACTIONS && process.env.NODE_ENV !== 'production') {
+  config({ path: '../../.env' });
+  logger.info('Local development mode - loaded .env file');
+} else if (process.env.GITHUB_ACTIONS) {
+  logger.info('GitHub Actions mode - using workflow secrets');
+} else {
+  logger.info('Production mode - using environment variables');
+}
 
 async function main(): Promise<void> {
   logger.banner('Brand Listener', 'AI-Powered Social Media Monitoring');

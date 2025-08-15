@@ -51,7 +51,7 @@ export function getEnvVar(name: string, required: boolean = true): string {
 export function validateEnvVars(): void {
   getEnvVar('TWITTER_API_KEY');
   getEnvVar('SLACK_WEBHOOK_URL');
-  getEnvVar('GOOGLE_APPLICATION_CREDENTIALS');
+  getEnvVar('GOOGLE_APPLICATION_CREDENTIALS_JSON');
   
   // Optional for Vision API
   getEnvVar('GOOGLE_PROJECT_ID', false);
