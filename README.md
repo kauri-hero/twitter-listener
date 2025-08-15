@@ -1,266 +1,458 @@
-# Brand Listener 🔍
+# 🎯 Brand Listener
 
-A comprehensive TypeScript monorepo for monitoring brand mentions across Twitter/X using advanced detection methods including explicit text matching and AI-powered image recognition.
+> AI-powered social media monitoring system that automatically tracks brand mentions and keywords across Twitter, delivering real-time notifications to Slack and comprehensive logging to Google Sheets.
 
-## 🚀 Features
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/features/actions)
+[![Google Sheets](https://img.shields.io/badge/Google%20Sheets-34A853?style=for-the-badge&logo=google-sheets&logoColor=white)](https://sheets.google.com/)
+[![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://slack.com/)
 
-### Core Capabilities
-- **Explicit Detection**: Direct @mentions and keyword monitoring
-- **Image Recognition**: AI-powered brand logo detection in images using Google Vision or CLIP
-- **Smart Notifications**: Rich Slack messages with confidence scoring
-- **Comprehensive Logging**: Detailed tracking in Google Sheets
-- **Automated Scheduling**: Runs every 30 minutes via GitHub Actions
+## ✨ Features
 
-### Technical Architecture
-- **Turborepo Monorepo**: Organized service-based architecture
-- **TypeScript-First**: Full type safety across all services
-- **Modular Design**: Independent services for Twitter, Vision, Pipelines, and Sinks
-- **Production Ready**: Error handling, retries, rate limiting, and state management
+- **🔍 Multi-Source Monitoring**: Track both direct mentions (`@yourhandle`) and keyword searches
+- **🤖 Intelligent Filtering**: Relevance scoring to reduce noise and focus on important conversations
+- **📱 Real-time Notifications**: Instant Slack alerts for high-priority mentions
+- **📊 Comprehensive Logging**: Automatic data capture to Google Sheets for analysis
+- **⚡ Automated Execution**: Runs on GitHub Actions every 6 hours (customizable)
+- **🛡️ Production Ready**: Secure authentication, error handling, and monitoring
+- **🔧 Easy Configuration**: YAML-based setup with environment-specific settings
 
-## 📁 Project Structure
+## 🏗️ Architecture
 
+```mermaid
+graph TB
+    A[GitHub Actions Trigger] --> B[Brand Listener App]
+    B --> C[Twitter API Client]
+    B --> D[Tweet Processor]
+    D --> E{Relevance Score}
+    E -->|High Score| F[Slack Notifications]
+    E -->|Medium Score| G[Google Sheets Logging]
+    E -->|Low Score| H[Discard]
+    
+    C --> I[Mentions Source]
+    C --> J[Keywords Source]
+    I --> D
+    J --> D
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style F fill:#4CAF50,color:#fff
+    style G fill:#2196F3,color:#fff
+    style H fill:#f44336,color:#fff
 ```
-brand-listener/
-├── packages/
-│   └── core/                          # Core package with all services
-│       └── src/
-│           ├── services/
-│           │   ├── twitter/           # TwitterAPI.io integration
-│           │   ├── vision/            # Image recognition (GCP Vision + CLIP)
-│           │   ├── pipelines/         # Detection logic
-│           │   └── sinks/             # Slack + Google Sheets output
-│           ├── config.ts              # Configuration management
-│           ├── types.ts               # Shared TypeScript types
-│           └── utils.ts               # Shared utilities
-└── apps/
-    └── brand-listener/                # Main application
-        ├── src/main.ts               # Main orchestrator
-        ├── config.yaml               # Configuration file
-        └── .github/workflows/        # CI/CD automation
-```
 
-## ⚡ Quick Start
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Node.js 20+** and **pnpm**
+- **Twitter Developer Account** with API access
+- **Google Cloud Project** with Sheets API enabled
+- **Slack Workspace** with webhook permissions
+- **GitHub repository** for automated execution
 
 ### 1. Clone and Install
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/yourusername/brand-listener.git
 cd brand-listener
-npm install
+pnpm install
 ```
 
-### 2. Configure Environment Variables
+### 2. Configure Authentication
 
-Create environment variables for:
+See the [detailed authentication setup](#🔐-authentication-setup) below.
+
+### 3. Configure Monitoring
 
 ```bash
-# Required
-TWITTER_API_KEY=your_twitterapi_io_key
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
-GOOGLE_APPLICATION_CREDENTIALS_JSON=base64_encoded_service_account_json
+# Copy the configuration template
+cp apps/brand-listener/config.yaml.example apps/brand-listener/config.yaml
 
-# Optional (for Google Vision)
-GOOGLE_PROJECT_ID=your_google_cloud_project_id
+# Edit with your brand details
+nano apps/brand-listener/config.yaml
 ```
 
-### 3. Configure Your Brand
+### 4. Test Locally
+
+```bash
+# Set up local environment
+cp .env.example .env
+# Edit .env with your credentials
+
+# Run the monitoring cycle
+pnpm run dev
+```
+
+### 5. Deploy to GitHub Actions
+
+Commit your changes and push to GitHub. The system will automatically run every 6 hours.
+
+## 🔐 Authentication Setup
+
+### Twitter API Setup
+
+1. **Create Twitter Developer Account**
+   - Go to [developer.twitter.com](https://developer.twitter.com/)
+   - Apply for developer access
+   - Create a new app
+
+2. **Generate API Keys**
+   - Navigate to your app's "Keys and tokens" section
+   - Generate "Consumer Keys" 
+   - Copy the **API Key** (this is your `TWITTER_API_KEY`)
+
+3. **Set API Access Level**
+   - Ensure your app has "Read" permissions
+   - For keyword searches, ensure you have "Academic Research" or "Pro" access
+
+### Google Cloud Setup
+
+1. **Create Google Cloud Project**
+   ```bash
+   # Using gcloud CLI
+   gcloud projects create your-brand-listener-project
+   gcloud config set project your-brand-listener-project
+   ```
+
+2. **Enable Google Sheets API**
+   ```bash
+   gcloud services enable sheets.googleapis.com
+   ```
+
+3. **Create Service Account**
+   ```bash
+   # Create service account
+   gcloud iam service-accounts create brand-listener-bot \
+       --display-name="Brand Listener Bot" \
+       --description="Service account for automated brand monitoring"
+
+   # Grant necessary permissions
+   gcloud projects add-iam-policy-binding your-brand-listener-project \
+       --member="serviceAccount:brand-listener-bot@your-brand-listener-project.iam.gserviceaccount.com" \
+       --role="roles/editor"
+
+   # Generate credentials file
+   gcloud iam service-accounts keys create ./gcp-credentials.json \
+       --iam-account=brand-listener-bot@your-brand-listener-project.iam.gserviceaccount.com
+   ```
+
+4. **Create Google Sheet**
+   - Create a new Google Sheet for your data
+   - Share it with your service account email: `brand-listener-bot@your-project.iam.gserviceaccount.com`
+   - Set permission to "Editor"
+   - Copy the spreadsheet ID from the URL
+
+### Slack Setup
+
+1. **Create Slack App**
+   - Go to [api.slack.com/apps](https://api.slack.com/apps)
+   - Click "Create New App" → "From scratch"
+   - Choose your workspace
+
+2. **Enable Incoming Webhooks**
+   - Go to "Incoming Webhooks" in your app settings
+   - Toggle "Activate Incoming Webhooks" to On
+   - Click "Add New Webhook to Workspace"
+   - Select the channel for notifications
+   - Copy the webhook URL
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file for local development:
+
+```bash
+# Twitter API
+TWITTER_API_KEY=your_twitter_api_key_here
+
+# Slack Integration  
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+
+# Google Cloud
+GOOGLE_PROJECT_ID=your-google-project-id
+GOOGLE_APPLICATION_CREDENTIALS=./gcp-credentials.json
+
+# Environment
+NODE_ENV=development
+```
+
+### Application Configuration
 
 Edit `apps/brand-listener/config.yaml`:
 
 ```yaml
+# Brand Listener Configuration
 brand:
-  handles: ["yourbrand"]
-  keywords: ["yourbrand", "your brand", "#yourbrand"]
-  negative_keywords: ["job opening", "parody"]
+  handles: ["yourhandle", "yourbrand"]  # Twitter handles to monitor (without @)
+  keywords: ["your product", "your company"]  # Keywords to search for
 
-sheet:
-  spreadsheetId: "your_google_sheets_id"
+filters:
+  lang: "en"  # Language filter for tweets
+  time_range_hours: 6  # How many hours back to search
 
 notify:
-  slack_channel: "#brand-monitoring"
+  slack_channel: "#social-monitoring"  # Slack channel for notifications
+
+thresholds:
+  notify: 0.80  # Relevance score needed for Slack notifications (0.0-1.0)
+  log_only: 0.60  # Relevance score needed for logging to sheets
+
+sheet:
+  spreadsheetId: "1FWXaMfO0p_LEdsjDT1YVaokq2MAndeLfDStuGCLUizY"  # Your Google Sheet ID
+  sheetName: "Sheet1"  # Sheet tab name
 ```
 
-### 4. Run Locally
+### GitHub Secrets
+
+Set up the following secrets in your GitHub repository (Settings → Secrets and variables → Actions):
+
+| Secret Name | Description | Example |
+|-------------|-------------|---------|
+| `TWITTER_API_KEY` | Your Twitter API Bearer Token | `AAAAAAAAAAAAAAAAAAAAAMLheAAAAAAA0%2BuSeid...` |
+| `SLACK_WEBHOOK_URL` | Slack incoming webhook URL | `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX` |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Service account JSON (minified) | `{"type":"service_account","project_id":"your-project"...}` |
+| `GOOGLE_PROJECT_ID` | Your Google Cloud project ID | `your-brand-listener-project` |
+
+**To get the JSON for `GOOGLE_APPLICATION_CREDENTIALS_JSON`:**
 
 ```bash
-# Development mode
-npm run dev
-
-# Production build and run
-npm run build
-npm run start
+# Minify the JSON credentials
+python3 -c "import json; print(json.dumps(json.load(open('gcp-credentials.json'))))"
 ```
 
-## 🔧 Configuration
+## 💻 Local Development
 
-### Brand Configuration
-```yaml
-brand:
-  handles: ["mybrand"]                 # @mentions to monitor
-  keywords: ["mybrand", "product"]     # Keywords to search for
-  negative_keywords: ["competitor"]    # Terms to exclude
+### Setup
+
+```bash
+# Install dependencies
+pnpm install
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your credentials
+
+# Verify setup
+pnpm run verify
 ```
 
-### Detection Thresholds
-```yaml
-thresholds:
-  notify: 0.80      # Send Slack notification
-  log_only: 0.60    # Log to sheets only
-  # Below 0.60 = ignore
-```
+### Available Scripts
 
-### Image Recognition
-```yaml
-image:
-  backend: "gcp-vision"    # or "clip-onnx"
-  logoThreshold: 0.80      # Google Vision confidence
-  clipThreshold: 0.32      # CLIP similarity threshold
-```
-
-## 🤖 Detection Methods
-
-### 1. Explicit Detection
-- **@Mentions**: Direct mentions of your brand handles
-- **Keyword Search**: Brand names, products, hashtags
-- **Confidence Scoring**: 1.0 for handles, 0.95 for exact matches, 0.8 for keywords
-
-### 2. Image-Only Detection
-- **Google Vision**: Logo detection API for brand logos
-- **CLIP ONNX**: Semantic image similarity (optional)
-- **Smart Filtering**: Excludes tweets already containing brand text
-
-## 📊 Data Flow
-
-1. **Collection**: Fetch from TwitterAPI.io (mentions + advanced search)
-2. **Analysis**: Text matching + image recognition
-3. **Scoring**: Confidence calculation with thresholds
-4. **Decision**: Notify, log-only, or ignore based on confidence
-5. **Output**: Slack notifications + Google Sheets logging
-
-## 🔌 Services Architecture
-
-### Twitter Service
-- TwitterAPI.io client with retry logic
-- Advanced search with Brigadir query grammar
-- Mentions endpoint with time-based pagination
-- Query builders for explicit and image-only searches
-
-### Vision Service
-- **GCP Vision Provider**: Logo detection with fuzzy matching
-- **CLIP ONNX Provider**: Semantic similarity (extensible)
-- Pluggable architecture for additional vision backends
-
-### Pipeline Service
-- **Explicit Pipeline**: Handles mentions and keyword searches
-- **Image Pipeline**: Processes image-only tweets
-- **Orchestrator**: Coordinates pipelines and deduplication
-
-### Sinks Service
-- **Slack Sink**: Rich Block Kit messages with tweet previews
-- **Sheets Sink**: Comprehensive logging with metadata
-- **State Management**: Watermarks to prevent duplicates
-
-## 📈 Monitoring & Logging
-
-### Slack Notifications
-- Rich formatting with author info and tweet previews  
-- Confidence badges (EXPLICIT vs IMAGE-IMPLICIT)
-- Quick action buttons (Open Tweet, View Profile)
-- Contextual information (matched terms, image analysis)
-
-### Google Sheets Logging
-- Complete audit trail with 18 columns of data
-- Run IDs for tracking execution batches
-- Error logging and debugging information
-- State management for watermarks
-
-## 🚀 Production Deployment
-
-### GitHub Actions
-Automatically runs every 30 minutes:
-```yaml
-schedule:
-  - cron: "*/30 * * * *"
-```
-
-### Required Secrets
-- `TWITTERAPI_KEY`: Your TwitterAPI.io API key
-- `SLACK_WEBHOOK_URL`: Slack incoming webhook URL
-- `GOOGLE_APPLICATION_CREDENTIALS_JSON`: Base64-encoded service account JSON
-- `GOOGLE_PROJECT_ID`: Google Cloud project ID (optional)
-
-## 🛠️ Development
-
-### Available Commands
 ```bash
 # Development
-npm run dev           # Run with hot reload
-npm run build         # Build all packages
-npm run typecheck     # Type checking
-npm run lint          # Code linting
+pnpm run dev              # Run brand listener once
+pnpm run build            # Build all packages
+pnpm run clean            # Clean build artifacts
 
-# Individual package commands
-npm run build --workspace=@brand-listener/core
-npm run test --workspace=@brand-listener/core
+# Utilities
+pnpm run verify           # Verify environment setup
+pnpm run lint             # Run linting
+pnpm run typecheck        # Type checking
 ```
 
-### Adding New Detection Methods
-1. Create new provider in `packages/core/src/services/vision/providers/`
-2. Implement `VisionProvider` interface
-3. Add to `VisionService` factory
-4. Update configuration schema
+### Project Structure
 
-### Extending Sinks
-1. Create new sink in `packages/core/src/services/sinks/`
-2. Implement required interfaces
-3. Add to main orchestrator
-4. Update configuration
-
-## 🔐 Security
-
-- Environment variables for all secrets
-- Base64 encoding for Google credentials  
-- No secrets committed to repository
-- Secure webhook URLs for Slack integration
-- API key rotation support
-
-## 📋 API Reference
-
-### TwitterAPI.io Integration
-- **Advanced Search**: `GET /twitter/tweet/advanced_search`
-- **Mentions**: `GET /twitter/user/mentions`  
-- **Tweet Details**: `GET /twitter/tweets`
-- Full pagination support with cursor-based navigation
-
-### Google Cloud Vision
-- Logo Detection API for brand identification
-- Label Detection for related terms
-- Confidence scoring and fuzzy matching
-
-## 🎯 Example Queries
-
-### Explicit Brand Search
 ```
-("mybrand" OR "my brand" OR "#mybrand") lang:en -is:retweet since:2024-01-01_12:00:00_UTC
+brand-listener/
+├── apps/
+│   └── brand-listener/           # Main application
+│       ├── src/main.ts          # Entry point
+│       └── config.yaml          # Configuration
+├── packages/
+│   ├── core/                    # Core business logic
+│   │   └── src/services/
+│   │       ├── sources/         # Twitter data sources
+│   │       ├── processing/      # Tweet processing
+│   │       └── sinks/          # Output destinations
+│   ├── types/                   # TypeScript definitions
+│   └── utils/                   # Shared utilities
+├── .github/workflows/           # GitHub Actions
+└── scripts/                     # Utility scripts
 ```
 
-### Image-Only Search  
+## 🤖 GitHub Actions Deployment
+
+### Workflow Configuration
+
+The system automatically runs on GitHub Actions with the following triggers:
+
+- **Schedule**: Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+- **Push**: On pushes to main branch
+- **Manual**: Via workflow dispatch
+
+### Customizing the Schedule
+
+Edit `.github/workflows/brand-listener.yml`:
+
+```yaml
+on:
+  schedule:
+    # Run every 2 hours
+    - cron: "0 */2 * * *"
+    # Run daily at 9 AM UTC
+    - cron: "0 9 * * *"
+    # Run weekdays at 9 AM and 5 PM UTC
+    - cron: "0 9,17 * * 1-5"
 ```
-has:images -("mybrand" OR "my brand" OR @mybrand) lang:en -is:retweet since:2024-01-01_12:00:00_UTC
+
+### Manual Execution
+
+```bash
+# Using GitHub CLI
+gh workflow run brand-listener.yml
+
+# Or trigger via GitHub web interface:
+# Actions → Brand Listener → Run workflow
+```
+
+## 📊 Data Schema
+
+### Google Sheets Output
+
+The system automatically creates the following columns in your Google Sheet:
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| `run_id` | Unique execution identifier | `clean-1692123456789` |
+| `captured_at_utc` | When the tweet was captured | `2023-08-15T14:30:00.000Z` |
+| `tweet_id` | Twitter tweet ID | `1691234567890123456` |
+| `tweet_url` | Direct link to tweet | `https://twitter.com/user/status/...` |
+| `author_username` | Tweet author's username | `john_doe` |
+| `author_name` | Tweet author's display name | `John Doe` |
+| `author_followers` | Author's follower count | `1234` |
+| `created_at_utc` | When the tweet was posted | `2023-08-15T14:25:00.000Z` |
+| `text` | Tweet content | `Loving the new features in @yourbrand!` |
+| `language` | Detected language | `en` |
+| `media_urls` | Attached media URLs | `["https://pbs.twimg.com/media/..."]` |
+| `reason` | Why it was captured | `mentions` or `keywords` |
+| `explicit_terms` | Matching terms found | `["@yourbrand", "new features"]` |
+| `confidence` | Relevance score | `0.85` |
+
+### Slack Notification Format
+
+```
+🎯 Brand Monitoring Alert
+
+📧 20 mentions • 🔍 11 keyword matches
+
+Top Mentions:
+• @john_doe: "Loving the new features in @yourbrand!"
+• @jane_smith: "@yourbrand customer service is amazing"
+• @tech_reviewer: "@yourbrand just released something big"
+
+View full report: [Google Sheet Link]
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### "Could not load the default credentials"
+
+**Problem**: Google Cloud authentication is not set up correctly.
+
+**Solution**:
+1. Verify your service account JSON is valid
+2. Check that `GOOGLE_APPLICATION_CREDENTIALS_JSON` secret is set correctly
+3. Ensure the Google Sheets API is enabled in your project
+
+#### "The caller does not have permission"
+
+**Problem**: Service account doesn't have access to your Google Sheet.
+
+**Solution**:
+1. Share your Google Sheet with the service account email
+2. Grant "Editor" permissions
+3. Verify the spreadsheet ID in your config is correct
+
+#### "Rate limit exceeded" from Twitter
+
+**Problem**: Twitter API rate limits reached.
+
+**Solution**:
+1. Reduce the `time_range_hours` in your config
+2. Use more specific keywords to reduce volume
+3. Consider upgrading your Twitter API access level
+
+#### "GitHub Actions workflow fails"
+
+**Problem**: Missing or incorrect secrets.
+
+**Solution**:
+1. Verify all required secrets are set in GitHub
+2. Check that secret values don't have extra spaces or characters
+3. Review workflow logs for specific error messages
+
+### Debug Mode
+
+Enable debug logging by setting the workflow input:
+
+```bash
+gh workflow run brand-listener.yml --field debug=true
+```
+
+### Testing Locally
+
+```bash
+# Test with a smaller time range
+# Edit config.yaml: time_range_hours: 1
+
+# Run once
+pnpm run dev
+
+# Check logs for any errors
 ```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Submit a pull request
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+# Fork and clone the repository
+git clone https://github.com/yourusername/brand-listener.git
+cd brand-listener
+
+# Install dependencies
+pnpm install
+
+# Create a feature branch
+git checkout -b feature/your-feature-name
+
+# Make your changes and test
+pnpm run build
+pnpm run lint
+pnpm run typecheck
+
+# Submit a pull request
+```
+
+### Adding New Features
+
+- **Sources**: Add new social media platforms in `packages/core/src/services/sources/`
+- **Sinks**: Add new output destinations in `packages/core/src/services/sinks/`
+- **Processing**: Enhance relevance scoring in `packages/core/src/services/processing/`
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🌟 Acknowledgments
+
+- Twitter API for social media data access
+- Google Sheets API for data storage
+- Slack API for real-time notifications
+- GitHub Actions for reliable automation
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/brand-listener/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/brand-listener/discussions)
+- **Documentation**: [Wiki](https://github.com/yourusername/brand-listener/wiki)
 
 ---
 
-**Built with ❤️ using TypeScript, TwitterAPI.io, Google Cloud Vision, and modern Node.js**
-# twitter-listener
+**Built with ❤️ for brands who care about their online presence**

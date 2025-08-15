@@ -1,7 +1,28 @@
 {
   "name": "brand-listener-workspace",
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "AI-powered social media monitoring system that tracks brand mentions and keywords across Twitter",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/brand-listener.git"
+  },
+  "keywords": [
+    "brand-monitoring",
+    "social-media",
+    "twitter",
+    "slack",
+    "google-sheets",
+    "automation",
+    "typescript",
+    "github-actions"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/brand-listener/issues"
+  },
+  "homepage": "https://github.com/yourusername/brand-listener#readme",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -23,6 +44,7 @@
     "typecheck": "turbo typecheck",
     "clean": "turbo clean",
     "test": "turbo test",
+    "setup": "./scripts/setup.sh",
     "verify": "./scripts/verify-setup.sh"
   },
   "packageManager": "pnpm@10.13.1",
