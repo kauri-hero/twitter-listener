@@ -8,7 +8,10 @@ import { TweetProcessor } from '@brand-listener/core/processing';
 import { SlackSink } from '@brand-listener/core/sinks';
 import { SheetsSink } from '@brand-listener/core/sinks/sheets';
 
-config({ path: '../../.env' });
+// Load .env file only when not in GitHub Actions
+if (process.env.NODE_ENV !== 'production') {
+  config({ path: '../../.env' });
+}
 
 
 
