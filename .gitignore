@@ -35,11 +35,15 @@ logs
 gcp-credentials.json
 service-account-key.json
 
-# IDE
+# IDE & Editor configs
 .vscode/
 .idea/
 *.swp
 *.swo
+opencode.jsonc
+
+# TypeScript build info
+*.tsbuildinfo
 
 # macOS
 .DS_Store

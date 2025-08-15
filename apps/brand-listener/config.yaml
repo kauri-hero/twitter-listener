@@ -1,19 +1,21 @@
-# Brand Listener Configuration
+# Brand Listener Configuration - Example
+# Replace these with your actual brand information
+
 brand:
-  handles: ["Send"]  # Twitter handles to monitor for mentions
-  keywords: ["/send"]  # Keywords to search for
+  handles: ["yourbrand", "yourcompany"]  # Twitter handles to monitor (without @)
+  keywords: ["your product", "your service", "your company"]  # Keywords to search for
 
 filters:
   lang: "en"  # Language filter for tweets
-  time_range_hours: 6 # How many hours back to search
+  time_range_hours: 6  # How many hours back to search (start with 2-6 for testing)
 
 notify:
-  slack_channel: "#social"  # Slack channel for notifications
+  slack_channel: "#social-monitoring"  # Slack channel for notifications
 
 thresholds:
-  notify: 0.80  # Relevance score needed for Slack notifications
-  log_only: 0.60  # Relevance score needed for logging to sheets
+  notify: 0.80  # Relevance score needed for Slack notifications (0.0-1.0)
+  log_only: 0.60  # Relevance score needed for logging to sheets (0.0-1.0)
 
 sheet:
-  spreadsheetId: "1FWXaMfO0p_LEdsjDT1YVaokq2MAndeLfDStuGCLUizY"
+  spreadsheetId: "YOUR_GOOGLE_SHEET_ID_HERE"  # Replace with your Google Sheet ID
   sheetName: "Sheet1"

@@ -54,7 +54,7 @@ graph TB
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/yourusername/brand-listener.git
+git clone https://github.com/YOUR_USERNAME/brand-listener.git
 cd brand-listener
 pnpm install
 ```
@@ -203,7 +203,7 @@ thresholds:
   log_only: 0.60  # Relevance score needed for logging to sheets
 
 sheet:
-  spreadsheetId: "1FWXaMfO0p_LEdsjDT1YVaokq2MAndeLfDStuGCLUizY"  # Your Google Sheet ID
+  spreadsheetId: "YOUR_GOOGLE_SHEET_ID_HERE"  # Your Google Sheet ID
   sheetName: "Sheet1"  # Sheet tab name
 ```
 
@@ -416,7 +416,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ```bash
 # Fork and clone the repository
-git clone https://github.com/yourusername/brand-listener.git
+git clone https://github.com/YOUR_USERNAME/brand-listener.git
 cd brand-listener
 
 # Install dependencies
@@ -452,9 +452,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/brand-listener/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/brand-listener/discussions)
-- **Documentation**: [Wiki](https://github.com/yourusername/brand-listener/wiki)
+- **Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/brand-listener/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/brand-listener/discussions)
+- **Documentation**: [Wiki](https://github.com/YOUR_USERNAME/brand-listener/wiki)
 
 ---
 
