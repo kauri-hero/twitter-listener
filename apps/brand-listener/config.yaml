@@ -1,27 +1,19 @@
 # Brand Listener Configuration
 brand:
-  handles: ["Send"]
-  keywords: ["sendit", "send.it"]
+  handles: ["Send"]  # Twitter handles to monitor for mentions
+  keywords: ["#sendit"]  # Keywords to search for
 
 filters:
-  lang: "en"
-  include_replies: true
-  include_quotes: true
-
-image:
-  backend: "gcp-vision"  # or "clip-onnx"
-  logoThreshold: 0.80
-  clipThreshold: 0.32
+  lang: "en"  # Language filter for tweets
+  time_range_hours: 2 # How many hours back to search (start small for testing)
 
 notify:
-  slack_channel: "#social"
+  slack_channel: "#social"  # Slack channel for notifications
 
 thresholds:
-  notify: 0.80
-  log_only: 0.60
+  notify: 0.80  # Relevance score needed for Slack notifications
+  log_only: 0.60  # Relevance score needed for logging to sheets
 
 sheet:
   spreadsheetId: "1FWXaMfO0p_LEdsjDT1YVaokq2MAndeLfDStuGCLUizY"
-
-state:
-  storage: "sheet"  # or "file"
+  sheetName: "Sheet1"

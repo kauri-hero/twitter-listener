@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+      "target": "ES2022", // the target JS version
+      "module": "preserve", // the module code generation
+      "moduleResolution": "bundler", // the module resolution strategy
+      "outDir": "dist",
+      "declaration": true,
+      "sourceMap": true,
+      "verbatimModuleSyntax": true
+    }
+  }

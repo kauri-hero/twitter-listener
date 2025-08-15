@@ -1,73 +1,15 @@
-// Configuration and types
-export { loadConfig, validateEnvVars, getEnvVar } from './config.js';
-export { createStateStore, FileStateStore } from './state.js';
-export * from './types.js';
+// Twitter client
+export { TwitterClient } from './services/twitter/client';
 
-// Utilities
-export {
-  generateRunId,
-  makeDecision,
-  detectionResultToHit,
-  extractMediaUrls,
-  formatSummary,
-  sleep,
-  truncate,
-  validateUrl
-} from './utils.js';
+// Sources
+export { MentionsSource, KeywordsSource } from './services/sources';
+export type { MentionsSourceConfig, KeywordsSourceConfig } from './services/sources';
 
-// Twitter service
-export {
-  TwitterClient,
-  buildExplicitQuery,
-  buildImageOnlyQuery,
-  toSinceUTCString,
-  parseTwitterDate,
-  isWithinWindow
-} from './services/twitter/index.js';
+// Processing
+export { TweetProcessor } from './services/processing/processor';
 
-export type {
-  AdvancedSearchParams,
-  AdvancedSearchResponse,
-  MentionsParams,
-  MentionsResponse,
-  TweetsByIdsParams
-} from './services/twitter/index.js';
+// Sinks
+export { SlackSink, SheetsSink } from './services/sinks';
 
-// Vision service
-export {
-  VisionService,
-  GCPVisionProvider,
-  CLIPOnnxProvider
-} from './services/vision/index.js';
-
-export type {
-  VisionProvider,
-  VisionResult
-} from './services/vision/index.js';
-
-// Pipeline services
-export {
-  PipelineOrchestrator,
-  ExplicitPipeline,
-  ImagePipeline
-} from './services/pipelines/index.js';
-
-export type {
-  PipelineContext,
-  ExplicitResult,
-  ImageResult
-} from './services/pipelines/index.js';
-
-// Sink services
-export {
-  SlackSink,
-  SheetsSink,
-  SheetsStateStore
-} from './services/sinks/index.js';
-
-export type {
-  SlackSinkConfig,
-  SheetsSinkConfig,
-  SinkResult,
-  SlackMessagePayload
-} from './services/sinks/index.js';
+// Config
+export { loadConfig } from './config';

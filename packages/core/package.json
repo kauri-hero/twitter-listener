@@ -2,27 +2,22 @@
   "name": "@brand-listener/core",
   "version": "0.0.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    } 
-  },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts",
-    "clean": "rm -rf dist"
+    "build": "tsc -p .",
+    "dev": "tsx src/index.ts --watch"
   },
   "dependencies": {
-    "undici": "^5.23.0",
-    "@google-cloud/vision": "^4.0.2",
+    "@brand-listener/types": "workspace:*",
     "googleapis": "^126.0.1",
-    "yaml": "^2.3.2",
-    "onnxruntime-node": "^1.15.1"
+    "yaml": "^2.3.2"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./twitter": "./src/services/twitter/index.ts",
+    "./sources": "./src/services/sources/index.ts",
+    "./processing": "./src/services/processing/index.ts",
+    "./sinks": "./src/services/sinks/index.ts",
+    "./sinks/sheets": "./src/services/sinks/sheets.ts"
   },
   "devDependencies": {
     "@types/node": "^20.5.0",

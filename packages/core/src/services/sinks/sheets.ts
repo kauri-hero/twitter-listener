@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
-import type { Hit } from '../../types.js';
-import type { SheetsSinkConfig, SinkResult } from './types.js';
+import type { SheetsSinkConfig, SinkResult, Hit } from '@brand-listener/types';
 
 export class SheetsSink {
   private sheets: any;
@@ -43,8 +42,8 @@ export class SheetsSink {
       
       // Append to sheet
       const response = await this.sheets.spreadsheets.values.append({
-        spreadsheetId: this.config.spreadsheet_id,
-        range: `${this.config.sheet_name || 'hits_log'}!A:R`,
+        spreadsheetId: this.config.spreadsheetId,
+        range: `${this.config.sheetName || 'hits_log'}!A:R`,
         valueInputOption: 'USER_ENTERED',
         insertDataOption: 'INSERT_ROWS',
         resource: {
@@ -68,12 +67,12 @@ export class SheetsSink {
   }
 
   private async ensureHeaders(): Promise<void> {
-    const sheetName = this.config.sheet_name || 'hits_log';
+    const sheetName = this.config.sheetName || 'hits_log';
     
     try {
       // Check if headers exist
       const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.config.spreadsheet_id,
+        spreadsheetId: this.config.spreadsheetId,
         range: `${sheetName}!1:1`
       });
 
@@ -101,7 +100,7 @@ export class SheetsSink {
         ];
 
         await this.sheets.spreadsheets.values.update({
-          spreadsheetId: this.config.spreadsheet_id,
+          spreadsheetId: this.config.spreadsheetId,
           range: `${sheetName}!1:1`,
           valueInputOption: 'RAW',
           resource: {

@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { parse } from 'yaml';
-import type { Config } from './types.js';
+import type { Config } from '@brand-listener/types';
 
 export async function loadConfig(configPath: string = 'config.yaml'): Promise<Config> {
   try {

@@ -1,139 +1,239 @@
-import {
-  loadConfig,
-  validateEnvVars,
-  getEnvVar,
-  TwitterClient,
-  VisionService,
-  PipelineOrchestrator,
-  SlackSink,
-  SheetsSink,
-  createStateStore,
-  generateRunId,
-  detectionResultToHit,
-  formatSummary
-} from '@brand-listener/core';
-import type { Config, Hit, DetectionResult } from '@brand-listener/core';
-import dotenv from 'dotenv';
+import type { Config, Tweet } from '@brand-listener/types';
+import { config } from 'dotenv';
+import { loadConfig, validateEnvVars, getEnvVar, Logger } from '@brand-listener/utils';
+import { TwitterClient } from '@brand-listener/core/twitter';
+import { MentionsSource } from '@brand-listener/core/sources';
+import { KeywordsSource } from '@brand-listener/core/sources';
+import { TweetProcessor } from '@brand-listener/core/processing';
+import { SlackSink } from '@brand-listener/core/sinks';
+import { SheetsSink } from '@brand-listener/core/sinks/sheets';
 
-dotenv.config({ path: '../../.env' });
+config({ path: '../../.env' });
+
+const logger = new Logger({ prefix: 'BrandListener' });
 
 async function main(): Promise<void> {
-  console.log('🚀 Brand Listener starting up...');
+  logger.banner('Brand Listener', 'AI-Powered Social Media Monitoring');
   
   try {
-    // Validate environment variables
-    console.log('🔧 Validating environment variables...');
+    // 1. Setup
+    logger.step('1️⃣', 'Setup & Configuration');
     validateEnvVars();
+    const appConfig = await loadConfig('config.yaml');
+    logger.success('Configuration loaded', {
+      handles: appConfig.brand.handles,
+      keywords: appConfig.brand.keywords,
+      timeRange: `${appConfig.filters.time_range_hours}h`,
+      thresholds: appConfig.thresholds
+    });
     
-    // Load configuration
-    console.log('📋 Loading configuration...');
-    const config = await loadConfig('config.yaml');
-    console.log(`✅ Configuration loaded for brand: ${config.brand.handles.join(', ')}`);
-    
-    // Initialize services
-    console.log('🔌 Initializing services...');
+    // 2. Initialize services
+    logger.step('2️⃣', 'Initialize Services');
     const twitterClient = new TwitterClient(getEnvVar('TWITTER_API_KEY'));
-    const visionService = new VisionService(config.image);
-    const stateStore = createStateStore(config.state, config.sheet.spreadsheetId);
+    const mentionsSource = new MentionsSource(twitterClient);
+    const keywordsSource = new KeywordsSource(twitterClient);
+    const processor = new TweetProcessor();
+    logger.success('Services initialized');
     
-    // Initialize pipelines
-    const orchestrator = new PipelineOrchestrator(
-      twitterClient,
-      visionService,
-      stateStore,
-      config
-    );
+    // 3. Collect from sources
+    logger.step('3️⃣', 'Collect Tweets from Sources');
     
-    // Initialize sinks
-    const slackSink = new SlackSink({
-      webhook_url: getEnvVar('SLACK_WEBHOOK_URL'),
-      channel: config.notify.slack_channel
+    const [mentionTweets, keywordTweets] = await Promise.all([
+      mentionsSource.getTweets({
+        handles: appConfig.brand.handles,
+        timeRangeHours: appConfig.filters.time_range_hours || 2
+      }),
+      keywordsSource.getTweets({
+        keywords: appConfig.brand.keywords,
+        language: appConfig.filters.lang,
+        timeRangeHours: appConfig.filters.time_range_hours || 2
+      })
+    ]);
+    
+    logger.info('Tweet collection complete', {
+      mentions: mentionTweets.length,
+      keywords: keywordTweets.length,
+      total: mentionTweets.length + keywordTweets.length
     });
     
-    const sheetsSink = new SheetsSink({
-      spreadsheet_id: config.sheet.spreadsheetId
-    });
+    if (mentionTweets.length > 0) {
+      logger.substep('📧 Mentions found', `${mentionTweets.length} tweets`);
+      const preview = mentionTweets.slice(0, 3).map((tweet, i) => ({
+        '#': i + 1,
+        'Author': `@${tweet.author.userName}`,
+        'Text': `"${tweet.text.substring(0, 60)}..."`
+      }));
+      logger.table(preview, ['#', 'Author', 'Text']);
+      if (mentionTweets.length > 3) {
+        logger.substep('', `... and ${mentionTweets.length - 3} more mentions`);
+      }
+    }
     
-    // Generate run ID
-    const runId = generateRunId();
-    console.log(`🎯 Starting run: ${runId}`);
+    if (keywordTweets.length > 0) {
+      logger.substep('🔍 Keywords found', `${keywordTweets.length} tweets`);
+      const preview = keywordTweets.slice(0, 3).map((tweet, i) => ({
+        '#': i + 1,
+        'Author': `@${tweet.author.userName}`,
+        'Text': `"${tweet.text.substring(0, 60)}..."`
+      }));
+      logger.table(preview, ['#', 'Author', 'Text']);
+      if (keywordTweets.length > 3) {
+        logger.substep('', `... and ${keywordTweets.length - 3} more keywords`);
+      }
+    }
     
-    // Run pipelines
-    console.log('🔍 Running detection pipelines...');
-    const detectionResults = await orchestrator.runPipelines(runId);
-    
-    if (detectionResults.length === 0) {
-      console.log('✅ No brand mentions detected');
+    if (mentionTweets.length === 0 && keywordTweets.length === 0) {
+      logger.info('No tweets found in the specified time range');
+      logger.success('Execution complete - no tweets to process');
       return;
     }
     
-    // Convert to hits and categorize
-    const hits: Hit[] = detectionResults.map(result => 
-      detectionResultToHit(result, runId, config)
-    );
+    // 4. Process tweets
+    logger.step('4️⃣', 'Process & Score Tweets');
+    logger.substep('Applying thresholds', `Notify: ${appConfig.thresholds.notify} | Log: ${appConfig.thresholds.log_only}`);
+    const processedTweets = await processor.process(mentionTweets, keywordTweets, appConfig.thresholds);
     
-    const notifyHits = hits.filter(hit => hit.decision === 'notify');
-    const logOnlyHits = hits.filter(hit => hit.decision === 'log_only');
-    const ignoredHits = hits.filter(hit => hit.decision === 'ignore');
+    // 5. Send to sinks
+    logger.step('5️⃣', 'Send to Destinations');
+    await sendToSinks(processedTweets, appConfig);
     
-    console.log(`📊 Results: ${hits.length} total, ${notifyHits.length} notify, ${logOnlyHits.length} log-only, ${ignoredHits.length} ignored`);
-    
-    // Send notifications for high-confidence hits
-    if (notifyHits.length > 0) {
-      console.log('📢 Sending Slack notifications...');
-      const slackResults = await slackSink.sendHits(notifyHits);
-      
-      // Update hits with Slack timestamps
-      for (let i = 0; i < notifyHits.length; i++) {
-        const result = slackResults[i];
-        if (result.success && result.metadata?.slack_ts) {
-          notifyHits[i].slack_ts = result.metadata.slack_ts;
-        }
-        if (!result.success && result.error) {
-          notifyHits[i].errors.push(result.error);
-        }
-      }
-      
-      const successfulNotifications = slackResults.filter(r => r.success).length;
-      console.log(`✅ Sent ${successfulNotifications}/${notifyHits.length} Slack notifications`);
-    }
-    
-    // Log all hits to Google Sheets
-    const allLoggableHits = [...notifyHits, ...logOnlyHits];
-    if (allLoggableHits.length > 0) {
-      console.log('📝 Logging to Google Sheets...');
-      const sheetsResult = await sheetsSink.appendHits(allLoggableHits);
-      
-      if (sheetsResult.success) {
-        console.log(`✅ Logged ${allLoggableHits.length} hits to Google Sheets`);
-      } else {
-        console.error(`❌ Failed to log to Google Sheets: ${sheetsResult.error}`);
-      }
-    }
-    
-    // Print summary
-    const errors = hits.reduce((acc, hit) => acc + hit.errors.length, 0);
-    console.log('📈', formatSummary(hits.length, detectionResults.length, notifyHits.length, errors));
+    logger.success('Brand listening cycle complete!');
     
   } catch (error) {
-    console.error('💥 Brand Listener failed:', error);
+    logger.error('Fatal error occurred', error);
     process.exit(1);
   }
 }
 
-// Handle graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\n🛑 Received SIGINT, shutting down gracefully...');
-  process.exit(0);
-});
+async function sendToSinks(processedTweets: any[], config: Config): Promise<void> {
+  const notifyTweets = processedTweets.filter(t => t.shouldNotify);
+  const logTweets = processedTweets.filter(t => t.shouldLog);
+  
+  logger.substep('Processing results', `${notifyTweets.length} for Slack, ${logTweets.length} for Sheets`);
+  
+  if (processedTweets.length > 0) {
+    const results = processedTweets.map((t, i) => ({
+      '#': i + 1,
+      'Source': t.source,
+      'Author': `@${t.tweet.author.userName}`,
+      'Preview': `"${t.tweet.text.substring(0, 40)}..."`,
+      'Score': t.relevanceScore?.toFixed(2) || 'N/A',
+      'Notify': t.shouldNotify ? '📢' : '❌',
+      'Log': t.shouldLog ? '📝' : '❌'
+    }));
+    logger.table(results, ['#', 'Source', 'Author', 'Preview', 'Score', 'Notify', 'Log']);
+  }
+  
+  // Send to Slack
+  if (notifyTweets.length > 0) {
+    try {
+      logger.substep('📢 Sending to Slack', `${notifyTweets.length} notifications`);
+      const slackSink = new SlackSink({
+        webhook_url: getEnvVar('SLACK_WEBHOOK_URL'),
+        channel: config.notify.slack_channel
+      });
+      
+      const hits = notifyTweets.map(t => tweetToHit(t.tweet, t.source, config));
+      const results = await slackSink.sendHits(hits);
+      const batchResult = results[0]; // Single batched result
+      
+      if (batchResult?.success) {
+        logger.success(`Slack batch notification sent`, `${notifyTweets.length} tweets in 1 message`);
+      } else {
+        logger.error(`Slack batch failed`, batchResult?.error || 'Unknown error');
+      }
+    } catch (error) {
+      logger.error('Slack delivery failed', error);
+    }
+  } else {
+    logger.substep('📢 Slack', 'No tweets meet notification threshold');
+  }
+  
+  // Send to Sheets
+  if (logTweets.length > 0) {
+    try {
+      logger.substep('📝 Logging to Sheets', `${logTweets.length} entries`);
+      const sheetsSink = new SheetsSink({
+        spreadsheetId: config.sheet.spreadsheetId,
+        sheetName: config.sheet.sheetName
+      });
+      
+      const hits = logTweets.map(t => tweetToHit(t.tweet, t.source, config));
+      const result = await sheetsSink.appendHits(hits);
+      
+      if (result.success) {
+        logger.success('Sheets logging complete', `${logTweets.length} entries added`);
+      } else {
+        logger.error('Sheets logging failed', result.error);
+      }
+    } catch (error) {
+      logger.error('Sheets delivery failed', error);
+    }
+  } else {
+    logger.substep('📝 Sheets', 'No tweets meet logging threshold');
+  }
+  
+  // Final summary
+  logger.summary({
+    'Total Processed': processedTweets.length,
+    'Slack Summary': notifyTweets.length > 0 ? '1 batched message' : 'None sent',
+    'Sheet Logs': logTweets.length,
+    'Mentions': processedTweets.filter(t => t.source === 'mentions').length,
+    'Keywords': processedTweets.filter(t => t.source === 'keywords').length
+  });
+}
 
-process.on('SIGTERM', () => {
-  console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  process.exit(0);
-});
+function tweetToHit(tweet: Tweet, source: string, config: Config): any {
+  // Extract actual terms that caused the hit from config
+  const explicitTerms = getExplicitTermsFromConfig(tweet, source, config);
+  
+  return {
+    run_id: 'clean-' + Date.now(),
+    captured_at_utc: new Date().toISOString(),
+    tweet_id: tweet.id,
+    tweet_url: tweet.url,
+    author_username: tweet.author.userName,
+    author_name: tweet.author.name,
+    author_followers: tweet.author.followersCount || 0,
+    created_at_utc: tweet.createdAt,
+    text: tweet.text,
+    language: tweet.lang || 'en',
+    media_urls: tweet.entities?.media?.map((m: any) => m.media_url_https || m.url) || [],
+    reason: source,
+    explicit_terms: explicitTerms,
+    image_explanations: [],
+    confidence: 0.8, // More realistic confidence score
+    decision: 'notify',
+    slack_ts: '',
+    errors: []
+  };
+}
 
-// Run the main function
+function getExplicitTermsFromConfig(tweet: Tweet, source: string, config: Config): string[] {
+  const tweetText = tweet.text.toLowerCase();
+  
+  if (source === 'mentions') {
+    // For mentions, find which configured handles are actually mentioned
+    const mentionedHandles = config.brand.handles.filter(handle => {
+      const handlePattern = new RegExp(`@${handle.toLowerCase()}\\b`, 'i');
+      return handlePattern.test(tweetText);
+    });
+    return mentionedHandles.map(handle => `@${handle}`);
+  } 
+  
+  if (source === 'keywords') {
+    // For keywords, find which configured keywords are actually present
+    const foundKeywords = config.brand.keywords.filter(keyword => {
+      const keywordLower = keyword.toLowerCase();
+      return tweetText.includes(keywordLower);
+    });
+    return foundKeywords;
+  }
+  
+  return []; // Fallback for unknown source
+}
+
 main().catch((error) => {
-  console.error('💥 Unhandled error:', error);
+  logger.error('💥 Unhandled error in main process', error);
   process.exit(1);
 });

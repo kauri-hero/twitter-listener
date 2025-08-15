@@ -1,50 +1,102 @@
-import { request } from 'undici';
-import type { DetectionResult, Hit } from '../../types.js';
-import type { SlackSinkConfig, SinkResult, SlackMessagePayload, SlackBlock } from './types.js';
+import type { SlackSinkConfig, SinkResult, SlackMessagePayload, SlackBlock, Hit } from '@brand-listener/types';
 
 export class SlackSink {
   constructor(private config: SlackSinkConfig) {}
 
   async sendHits(hits: Hit[]): Promise<SinkResult[]> {
-    const results: SinkResult[] = [];
-    
-    for (const hit of hits) {
-      try {
-        const result = await this.sendSingleHit(hit);
-        results.push(result);
-      } catch (error) {
-        results.push({
-          success: false,
-          error: `Failed to send hit ${hit.tweet_id}: ${error}`
-        });
-      }
+    if (hits.length === 0) {
+      return [];
     }
+
+    try {
+      const result = await this.sendBatchedHits(hits);
+      // Return array with single result for all hits
+      return [result];
+    } catch (error) {
+      return [{
+        success: false,
+        error: `Failed to send batch: ${error}`
+      }];
+    }
+  }
+
+  private async sendBatchedHits(hits: Hit[]): Promise<SinkResult> {
+    const webhookUrl = this.config.webhook_url || this.config.webhookUrl;
     
-    return results;
+    if (!webhookUrl) {
+      return {
+        success: false,
+        error: `Slack webhook URL not configured`
+      };
+    }
+
+    const payload = this.buildBatchedSlackMessage(hits);
+  
+    
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload) 
+    });
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        metadata: { 
+          slack_ts: Date.now().toString(),
+          hits_count: hits.length
+        }
+      };
+    } else {
+      const errorText = await response.text();
+      
+      return {
+        success: false,
+        error: `Slack API error: ${response.status} - ${errorText}`
+      };
+    }
   }
 
   async sendSingleHit(hit: Hit): Promise<SinkResult> {
     try {
+      const webhookUrl = this.config.webhook_url || this.config.webhookUrl;
+      
+      if (!webhookUrl) {
+        return {
+          success: false,
+          error: `Slack webhook URL not configured`
+        };
+      }
+
       const payload = this.buildSlackMessage(hit);
       
-      const response = await request(this.config.webhook_url, {
+      console.log('🔍 Slack Debug - Payload:', JSON.stringify(payload, null, 2));
+      
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload) 
       });
 
-      if (response.statusCode === 200) {
+      console.log('🔍 Slack Debug - Response status:', response.status);
+      const responseText = await response.text(); 
+      console.log('🔍 Slack Debug - Response:', responseText);
+      console.log('🔍 Slack Debug - Webhook URL ends with:', webhookUrl.slice(-20));
+
+      if (response.status === 200) {
         return {
           success: true,
           metadata: { slack_ts: Date.now().toString() }
         };
       } else {
-        const errorText = await response.body.text();
+        const errorText = await response.text();
         return {
           success: false,
-          error: `Slack API error: ${response.statusCode} - ${errorText}`
+          error: `Slack API error: ${response.status} - ${errorText}`
         };
       }
     } catch (error) {
@@ -55,17 +107,135 @@ export class SlackSink {
     }
   }
 
-  private buildSlackMessage(hit: Hit): SlackMessagePayload {
-    const reasonDisplay = hit.reason === 'explicit_text' ? 'EXPLICIT' : 'IMAGE-IMPLICIT';
-    const confidencePercent = (hit.confidence * 100).toFixed(0);
+  private buildBatchedSlackMessage(hits: Hit[]): SlackMessagePayload {
+    const mentionHits = hits.filter(h => h.reason === 'mentions');
+    const keywordHits = hits.filter(h => h.reason === 'keywords');
+    const totalHits = hits.length;
     
     const blocks: SlackBlock[] = [
-      // Header
+      // Header with summary
       {
-        type: 'header',
+        type: 'section',
         text: {
-          type: 'plain_text',
-          text: `🔍 Brand hit — ${reasonDisplay} (${confidencePercent}%)`
+          type: 'mrkdwn',
+          text: `🎯 *Brand Monitoring Report*\n${totalHits} new ${totalHits === 1 ? 'mention' : 'mentions'} found • ${mentionHits.length} @Send mentions • ${keywordHits.length} #sendit keywords`
+        }
+      },
+      
+      // Divider
+      {
+        type: 'divider'
+      }
+    ];
+
+    // Add top mentions (max 5)
+    if (mentionHits.length > 0) {
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*📧 Recent @Send Mentions (${mentionHits.length})*`
+        }
+      });
+
+      mentionHits.slice(0, 5).forEach(hit => {
+        blocks.push({
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `• *${hit.author_name}* (@${hit.author_username})`
+          },
+          accessory: {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: '🔗 View Tweet'
+            },
+            url: hit.tweet_url,
+            style: 'primary'
+          }
+        });
+      });
+
+      if (mentionHits.length > 5) {
+        blocks.push({
+          type: 'context',
+          elements: [{
+            type: 'mrkdwn',
+            text: `... and ${mentionHits.length - 5} more mentions`
+          }]
+        });
+      }
+    }
+
+    // Add top keywords (max 3)
+    if (keywordHits.length > 0) {
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*🔍 Recent Keyword mentions (${keywordHits.length})*`
+        }
+      });
+
+      keywordHits.slice(0, 3).forEach(hit => {
+        blocks.push({
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `• *${hit.author_name}* (@${hit.author_username})\n> ${this.truncateText(hit.text, 150)}`
+          },
+          accessory: {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: '🔗 View'
+            },
+            url: hit.tweet_url
+          }
+        });
+      });
+
+      if (keywordHits.length > 3) {
+        blocks.push({
+          type: 'context',
+          elements: [{
+            type: 'mrkdwn',
+            text: `... and ${keywordHits.length - 3} more keyword mentions`
+          }]
+        });
+      }
+    }
+
+    // Footer with timestamp
+    blocks.push({
+      type: 'context',
+      elements: [{
+        type: 'mrkdwn',
+        text: `📊 Report generated at ${new Date().toLocaleString()}`
+      }]
+    });
+
+    return {
+      text: `Brand Monitoring: ${totalHits} new mentions found`,
+      blocks
+    };
+  }
+
+  private buildSlackMessage(hit: Hit): SlackMessagePayload {
+    const reasonDisplay = hit.reason === 'mentions' ? 'MENTION' : 
+                         hit.reason === 'keywords' ? 'KEYWORD' : 
+                         hit.reason.toUpperCase();
+    const confidencePercent = (hit.confidence * 100).toFixed(0);
+    const matchType = hit.reason === 'mentions' ? 'mentioned @Send' : 'used #sendit';
+    
+    const blocks: SlackBlock[] = [
+      // Clean header with brand context
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `🎯 *Brand ${reasonDisplay}* • ${confidencePercent}% confidence\n*${hit.author_name}* (@${hit.author_username}) ${matchType}`
         }
       },
       
@@ -74,67 +244,64 @@ export class SlackSink {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*${hit.author_name}* (@${hit.author_username}) • ${hit.author_followers.toLocaleString()} followers\n\n${this.truncateText(hit.text, 280)}`
-        },
-        accessory: hit.media_urls.length > 0 ? {
-          type: 'image',
-          image_url: hit.media_urls[0],
-          alt_text: 'Tweet image'
-        } : undefined
+          text: `> ${this.truncateText(hit.text, 200)}`
+        }
+      },
+      
+      // Compact metadata
+      {
+        type: 'context',
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `👥 ${hit.author_followers.toLocaleString()} followers • 📅 ${this.formatDate(hit.created_at_utc)} • 🗣️ ${hit.language?.toUpperCase() || 'EN'}`
+          }
+        ]
+      },
+
+      // Action buttons
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: '🔗 View Tweet'
+            },
+            url: hit.tweet_url,
+            style: 'primary'
+          },
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: '👤 Profile'
+            },
+            url: `https://twitter.com/${hit.author_username}`
+          }
+        ]
       }
     ];
 
-    // Context information
-    const contextElements = [
-      `📅 ${new Date(hit.created_at_utc).toLocaleString()}`,
-      `🗣️ ${hit.language || 'unknown'}`
-    ];
-
-    if (hit.explicit_terms.length > 0) {
-      contextElements.push(`🎯 Matched: ${hit.explicit_terms.join(', ')}`);
-    }
-
-    if (hit.image_explanations.length > 0) {
-      contextElements.push(`🖼️ ${hit.image_explanations.join('; ')}`);
-    }
-
-    blocks.push({
-      type: 'context',
-      elements: contextElements.map(text => ({
-        type: "mrkdwn",
-        text: text
-      }))
-    });
-
-    // Actions
-    blocks.push({
-      type: 'actions',
-      elements: [
-        {
-          type: 'button',
-          text: {
-            type: 'plain_text',
-            text: 'Open Tweet'
-          },
-          url: hit.tweet_url,
-          style: 'primary'
-        },
-        {
-          type: 'button',
-          text: {
-            type: 'plain_text',
-            text: 'View Profile'
-          },
-          url: `https://twitter.com/${hit.author_username}`
-        }
-      ]
-    });
-
     return {
-      text: `Brand mention detected: ${hit.author_username}`,
-      blocks,
-      channel: this.config.channel
+      text: `Brand ${reasonDisplay}: ${hit.author_username} ${matchType}`,
+      blocks
     };
+  }
+
+  private formatDate(utcDate: string): string {
+    const date = new Date(utcDate);
+    const now = new Date();
+    const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes}m ago`;
+    } else if (diffMinutes < 1440) {
+      return `${Math.floor(diffMinutes / 60)}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   }
 
   private truncateText(text: string, maxLength: number): string {

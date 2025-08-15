@@ -19,6 +19,8 @@
 - Follow existing folder structure and naming conventions
 - Place tests adjacent to source files with `.test.ts` or `.spec.ts` extensions
 - Use index files for clean exports from directories
+- I have a preference for mono repo structures using turbo repo. 
+- Break up projects with apps being user facing and the src code in packages, and you have proper separation of concerns. 
 
 ## Important Notes
 - Always run lint and typecheck after making changes

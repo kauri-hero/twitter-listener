@@ -1,0 +1,24 @@
+{
+  "name": "@brand-listener/types",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsx src/index.ts --watch"
+  },
+  "dependencies": {
+    "@google-cloud/vision": "^4.0.2",
+    "googleapis": "^126.0.1",
+    "onnxruntime-node": "^1.15.1",
+    "undici": "^5.23.0",
+    "yaml": "^2.3.2",
+    "zod": "^4.0.17"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.0",
+    "typescript": "^5.1.6"
+  }
+}
