@@ -1,7 +1,7 @@
 # Brand Listener Configuration
 brand:
   handles: ["Send"]  # Twitter handles to monitor for mentions
-  keywords: ["#sendit"]  # Keywords to search for
+  keywords: ["/send"]  # Keywords to search for
 
 filters:
   lang: "en"  # Language filter for tweets

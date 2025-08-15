@@ -10,6 +10,8 @@ import { SheetsSink } from '@brand-listener/core/sinks/sheets';
 
 config({ path: '../../.env' });
 
+
+
 const logger = new Logger({ prefix: 'BrandListener' });
 
 async function main(): Promise<void> {
