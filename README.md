@@ -54,7 +54,7 @@ graph TB
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/brand-listener.git
+git clone https://github.com/alavida.ai/brand-listener.git
 cd brand-listener
 pnpm install
 ```
@@ -93,7 +93,7 @@ Commit your changes and push to GitHub. The system will automatically run every 
 ### Twitter API .io Setup
 
 1. **Create Twitter API .io Account**
-   - Go to [twitterapi.io](https://twitterapi.io/)
+   - Go to [TwitterAPI.io](https://twitterapi.io/?ref=alexgirardet) (Referall cuz why not, you got this for free, and I wouldn't recommend BS)
    - Sign up for an account
    - Choose a plan that fits your monitoring needs
 
@@ -134,13 +134,21 @@ Commit your changes and push to GitHub. The system will automatically run every 
    gcloud projects add-iam-policy-binding your-brand-listener-project \
        --member="serviceAccount:brand-listener-bot@your-brand-listener-project.iam.gserviceaccount.com" \
        --role="roles/editor"
-
-   # Generate credentials file
-   gcloud iam service-accounts keys create ./gcp-credentials.json \
-       --iam-account=brand-listener-bot@your-brand-listener-project.iam.gserviceaccount.com
    ```
 
-4. **Create Google Sheet**
+4. **Generate Service Account Credentials**
+   ```bash
+   # Generate credentials JSON file (this creates gcp-credentials.json locally)
+   gcloud iam service-accounts keys create ./gcp-credentials.json \
+       --iam-account=brand-listener-bot@your-brand-listener-project.iam.gserviceaccount.com
+   
+   # Verify the file was created
+   ls -la gcp-credentials.json
+   ```
+
+   ⚠️ **Important**: Keep this file secure and never commit it to version control!
+
+5. **Create Google Sheet**
    - Create a new Google Sheet for your data
    - Share it with your service account email: `brand-listener-bot@your-project.iam.gserviceaccount.com`
    - Set permission to "Editor"
@@ -175,7 +183,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
 
 # Google Cloud
 GOOGLE_PROJECT_ID=your-google-project-id
-GOOGLE_APPLICATION_CREDENTIALS=./gcp-credentials.json
+GOOGLE_APPLICATION_CREDENTIALS_JSON=./gcp-credentials.json
 
 # Environment
 NODE_ENV=development
@@ -218,12 +226,29 @@ Set up the following secrets in your GitHub repository (Settings → Secrets and
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Service account JSON (minified) | `{"type":"service_account","project_id":"your-project"...}` |
 | `GOOGLE_PROJECT_ID` | Your Google Cloud project ID | `your-brand-listener-project` |
 
-**To get the JSON for `GOOGLE_APPLICATION_CREDENTIALS_JSON`:**
+**To prepare the `GOOGLE_APPLICATION_CREDENTIALS_JSON` secret:**
 
+After generating `gcp-credentials.json` locally (see step 4 above), you need to minify it for GitHub secrets:
+
+**Option 1: Using jq (recommended)**
 ```bash
-# Minify the JSON credentials
+# Minify the JSON credentials using jq
+cat gcp-credentials.json | jq -c .
+
+# Or copy directly to clipboard (macOS)
+cat gcp-credentials.json | jq -c . | pbcopy
+
+# Or copy directly to clipboard (Linux)
+cat gcp-credentials.json | jq -c . | xclip -selection clipboard
+```
+
+**Option 2: Using Python**
+```bash
+# Minify the JSON credentials using Python
 python3 -c "import json; print(json.dumps(json.load(open('gcp-credentials.json'))))"
 ```
+
+Copy the minified JSON output and paste it as the value for the `GOOGLE_APPLICATION_CREDENTIALS_JSON` GitHub secret.
 
 ## 💻 Local Development
 
@@ -416,7 +441,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ```bash
 # Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/brand-listener.git
+git clone https://github.com/alavida.ai/brand-listener.git
 cd brand-listener
 
 # Install dependencies
@@ -452,9 +477,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/YOUR_USERNAME/brand-listener/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/brand-listener/discussions)
-- **Documentation**: [Wiki](https://github.com/YOUR_USERNAME/brand-listener/wiki)
+- **Issues**: [GitHub Issues](https://github.com/alavida.ai/brand-listener/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/alavida.ai/brand-listener/discussions)
+- **Documentation**: [Wiki](https://github.com/alavida.ai/brand-listener/wiki)
 
 ---
 
