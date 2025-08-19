@@ -54,8 +54,8 @@ graph TB
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/alavida.ai/brand-listener.git
-cd brand-listener
+git clone https://github.com/alavida.ai/twitter-listener.git
+cd twitter-listener
 pnpm install
 ```
 
