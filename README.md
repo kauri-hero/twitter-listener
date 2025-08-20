@@ -18,6 +18,7 @@
 - **🛡️ Production Ready**: Secure authentication, error handling, and monitoring
 - **🔧 Easy Configuration**: YAML-based setup with environment-specific settings
 - **🎮 Multi-Platform Support**: Choose Slack, Discord, or both for notifications
+- **⏳ Smart Rate Limiting**: Automatic 6-second delays between API requests to respect Twitter API .io limits
 
 ## 🏗️ Architecture
 
@@ -238,6 +239,12 @@ sheet:
   sheetName: "Sheet1"  # Sheet tab name
 ```
 
+**Configuration Validation:**
+- **Empty strings** like `[""]` in handles or keywords will be automatically filtered out with a warning
+- **Empty arrays** like `[]` will disable that monitoring source (mentions or keywords)
+- **At least one valid source** (handle or keyword) is required for the application to run
+- The application will gracefully handle cases where one source is empty and continue with the other
+
 ### GitHub Secrets
 
 Set up the following secrets in your GitHub repository (Settings → Secrets and variables → Actions):
@@ -441,9 +448,12 @@ Each notification includes:
 **Problem**: Twitter API .io rate limits reached.
 
 **Solution**:
-1. Reduce the `time_range_hours` in your config
-2. Use more specific keywords to reduce volume
-3. Consider upgrading your Twitter API .io plan for higher limits
+1. **Automatic Rate Limiting**: The system now automatically enforces a 6-second delay between requests to respect Twitter API .io's free-tier limits
+2. Reduce the `time_range_hours` in your config to minimize the number of requests needed
+3. Use more specific keywords to reduce volume
+4. Consider upgrading your Twitter API .io plan for higher limits
+
+**Note**: With multiple handles/keywords configured, the system will process them sequentially with 6-second delays. This is normal behavior for free-tier accounts.
 
 #### "GitHub Actions workflow fails"
 

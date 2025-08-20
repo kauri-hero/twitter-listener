@@ -118,7 +118,7 @@ export class SlackSink {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `🎯 *Brand Monitoring Report*\n${totalHits} new ${totalHits === 1 ? 'mention' : 'mentions'} found • ${mentionHits.length} @Send mentions • ${keywordHits.length} #sendit keywords`
+          text: `🎯 *Brand Monitoring Report*\n${totalHits} new ${totalHits === 1 ? 'mention' : 'mentions'} found • ${mentionHits.length} Handle mentions • ${keywordHits.length} keywords`
         }
       },
       
@@ -134,7 +134,7 @@ export class SlackSink {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*📧 Recent @Send Mentions (${mentionHits.length})*`
+          text: `*📧 Recent Handle Mentions (${mentionHits.length})*`
         }
       });
 
@@ -227,7 +227,7 @@ export class SlackSink {
                          hit.reason === 'keywords' ? 'KEYWORD' : 
                          hit.reason.toUpperCase();
     const confidencePercent = (hit.confidence * 100).toFixed(0);
-    const matchType = hit.reason === 'mentions' ? 'mentioned @Send' : 'used #sendit';
+    const matchType = hit.reason === 'mentions' ? 'mentioned Handle' : 'used keywords';
     
     const blocks: SlackBlock[] = [
       // Clean header with brand context

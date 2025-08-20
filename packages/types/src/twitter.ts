@@ -136,19 +136,19 @@ export const TweetsByIdsParamsSchema = z.object({
 // Twitter API Response schemas
 export const MentionsResponseSchema = z.object({
   mentions: z.array(TweetSchema),
-  next_cursor: z.string().optional()
+  next_cursor: z.string().nullable().optional()
 });
 
 export const AdvancedSearchResponseSchema = z.object({
   tweets: z.array(TweetSchema),
-  next_cursor: z.string().optional()
+  next_cursor: z.string().nullable().optional()
 });
 
 // Raw API Response schemas (for parsing external API responses)
 // More permissive schema to allow any API response structure
 export const RawTweetApiResponseSchema = z.object({
   tweets: z.array(TweetSchema),
-  next_cursor: z.string().optional(),
+  next_cursor: z.string().nullable().optional(),
   has_next_page: z.boolean().optional(),
   status: z.string().optional(),
   message: z.string().optional()

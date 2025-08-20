@@ -15,12 +15,47 @@ export async function loadConfig(configPath: string = 'config.yaml'): Promise<Co
 }
 
 function validateConfig(config: Config): void {
-  if (!config.brand?.handles?.length) {
+  // Validate handles - allow empty array but warn
+  if (!config.brand?.handles) {
     throw new Error('Config must include brand.handles array');
   }
   
-  if (!config.brand?.keywords?.length) {
+  if (!Array.isArray(config.brand.handles)) {
+    throw new Error('Config brand.handles must be an array');
+  }
+  
+  // Filter out empty strings and warn about them
+  const validHandles = config.brand.handles.filter(handle => handle && handle.trim() !== '');
+  if (validHandles.length !== config.brand.handles.length) {
+    console.warn('⚠️ Warning: Some handles in config are empty strings and will be ignored');
+  }
+  
+  if (validHandles.length === 0) {
+    console.warn('⚠️ Warning: No valid handles configured - mentions monitoring will be skipped');
+  }
+  
+  // Validate keywords - allow empty array but warn
+  if (!config.brand?.keywords) {
     throw new Error('Config must include brand.keywords array');
+  }
+  
+  if (!Array.isArray(config.brand.keywords)) {
+    throw new Error('Config brand.keywords must be an array');
+  }
+  
+  // Filter out empty strings and warn about them
+  const validKeywords = config.brand.keywords.filter(keyword => keyword && keyword.trim() !== '');
+  if (validKeywords.length !== config.brand.keywords.length) {
+    console.warn('⚠️ Warning: Some keywords in config are empty strings and will be ignored');
+  }
+  
+  if (validKeywords.length === 0) {
+    console.warn('⚠️ Warning: No valid keywords configured - keyword monitoring will be skipped');
+  }
+  
+  // Require at least one valid source
+  if (validHandles.length === 0 && validKeywords.length === 0) {
+    throw new Error('Config must include at least one valid handle or keyword to monitor');
   }
   
   if (!config.sheet?.spreadsheetId) {

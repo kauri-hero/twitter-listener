@@ -34,6 +34,7 @@ logs
 # Google Cloud credentials (should be base64 in env vars)
 gcp-credentials.json
 service-account-key.json
+bot-creds.json
 
 # IDE & Editor configs
 .vscode/
@@ -58,3 +59,4 @@ coverage/
 # Temporary files
 tmp/
 temp/
+config.yaml

@@ -113,7 +113,7 @@ export class DiscordSink {
     
     const embed: DiscordEmbed = {
       title: '🎯 Brand Monitoring Report',
-      description: `${totalHits} new ${totalHits === 1 ? 'mention' : 'mentions'} found • ${mentionHits.length} @Send mentions • ${keywordHits.length} #sendit keywords`,
+      description: `${totalHits} new ${totalHits === 1 ? 'mention' : 'mentions'} found • ${mentionHits.length} Handle mentions • ${keywordHits.length} keywords`,
       color: 0x00ff00, // Green color
       fields: [],
       footer: {
@@ -130,13 +130,13 @@ export class DiscordSink {
       
       if (mentionHits.length > 5) {
         embed.fields!.push({
-          name: `📧 Recent @Send Mentions (${mentionHits.length})`,
+          name: `📧 Recent Handle Mentions (${mentionHits.length})`,
           value: mentionText + `\n... and ${mentionHits.length - 5} more mentions`,
           inline: false
         });
       } else {
         embed.fields!.push({
-          name: `📧 Recent @Send Mentions (${mentionHits.length})`,
+          name: `📧 Recent Handle Mentions (${mentionHits.length})`,
           value: mentionText,
           inline: false
         });
@@ -175,7 +175,7 @@ export class DiscordSink {
                          hit.reason === 'keywords' ? 'KEYWORD' : 
                          hit.reason.toUpperCase();
     const confidencePercent = (hit.confidence * 100).toFixed(0);
-    const matchType = hit.reason === 'mentions' ? 'mentioned @Send' : 'used #sendit';
+    const matchType = hit.reason === 'mentions' ? 'mentioned Handle' : 'used keywords';
     
     // Determine color based on reason
     const color = hit.reason === 'mentions' ? 0x00ff00 : 0xffa500; // Green for mentions, Orange for keywords
