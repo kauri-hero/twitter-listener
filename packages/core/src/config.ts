@@ -27,8 +27,9 @@ function validateConfig(config: Config): void {
     throw new Error('Config must include sheet.spreadsheetId');
   }
   
-  if (!config.notify?.slack_channel) {
-    throw new Error('Config must include notify.slack_channel');
+  // Check for at least one notification channel (Slack or Discord)
+  if (!config.notify?.slack_channel && !config.notify?.discord_channel && !config.notify?.channel) {
+    throw new Error('Config must include at least one notification channel: notify.slack_channel, notify.discord_channel, or notify.channel');
   }
   
   if (typeof config.thresholds?.notify !== 'number' || config.thresholds.notify < 0 || config.thresholds.notify > 1) {
@@ -50,7 +51,15 @@ export function getEnvVar(name: string, required: boolean = true): string {
 
 export function validateEnvVars(): void {
   getEnvVar('TWITTER_API_KEY');
-  getEnvVar('SLACK_WEBHOOK_URL');
+  
+  // Check for at least one webhook URL (Slack or Discord)
+  const slackWebhook = process.env.SLACK_WEBHOOK_URL;
+  const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+  
+  if (!slackWebhook && !discordWebhook) {
+    throw new Error('At least one webhook URL must be set: SLACK_WEBHOOK_URL or DISCORD_WEBHOOK_URL');
+  }
+  
   getEnvVar('GOOGLE_APPLICATION_CREDENTIALS_JSON');
   
   // Optional for Vision API

@@ -17,7 +17,9 @@ export interface FilterConfig {
 }
 
 export interface NotifyConfig {
-  slack_channel: string;
+  slack_channel?: string; // Backward compatibility
+  discord_channel?: string; // Discord-specific channel
+  channel?: string; // Unified channel for both platforms
 }
 
 export interface ThresholdConfig {

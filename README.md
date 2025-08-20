@@ -12,11 +12,12 @@
 
 - **🔍 Multi-Source Monitoring**: Track both direct mentions (`@yourhandle`) and keyword searches
 - **🤖 Intelligent Filtering**: Relevance scoring to reduce noise and focus on important conversations
-- **📱 Real-time Notifications**: Instant Slack alerts for high-priority mentions
+- **📱 Real-time Notifications**: Instant Slack and Discord alerts for high-priority mentions
 - **📊 Comprehensive Logging**: Automatic data capture to Google Sheets for analysis
 - **⚡ Automated Execution**: Runs on GitHub Actions every 6 hours (customizable)
 - **🛡️ Production Ready**: Secure authentication, error handling, and monitoring
 - **🔧 Easy Configuration**: YAML-based setup with environment-specific settings
+- **🎮 Multi-Platform Support**: Choose Slack, Discord, or both for notifications
 
 ## 🏗️ Architecture
 
@@ -27,6 +28,7 @@ graph TB
     B --> D[Tweet Processor]
     D --> E{Relevance Score}
     E -->|High Score| F[Slack Notifications]
+    E -->|High Score| F2[Discord Notifications]
     E -->|Medium Score| G[Google Sheets Logging]
     E -->|Low Score| H[Discard]
     
@@ -37,6 +39,7 @@ graph TB
     
     style A fill:#f9f,stroke:#333,stroke-width:2px
     style F fill:#4CAF50,color:#fff
+    style F2 fill:#7289DA,color:#fff
     style G fill:#2196F3,color:#fff
     style H fill:#f44336,color:#fff
 ```
@@ -48,7 +51,7 @@ graph TB
 - **Node.js 20+** and **pnpm**
 - **Twitter Developer Account** with API access
 - **Google Cloud Project** with Sheets API enabled
-- **Slack Workspace** with webhook permissions
+- **Slack Workspace** or **Discord Server** with webhook permissions
 - **GitHub repository** for automated execution
 
 ### 1. Clone and Install
@@ -168,6 +171,20 @@ Commit your changes and push to GitHub. The system will automatically run every 
    - Select the channel for notifications
    - Copy the webhook URL
 
+### Discord Setup
+
+1. **Create Discord Webhook**
+   - Go to your Discord server
+   - Right-click on the channel where you want notifications
+   - Select "Edit Channel" → "Integrations" → "Webhooks"
+   - Click "New Webhook"
+   - Give it a name (e.g., "Brand Listener")
+   - Copy the webhook URL
+
+2. **Webhook URL Format**
+   - Your Discord webhook URL will look like: `https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN`
+   - Keep this URL secure and never share it publicly
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -180,6 +197,9 @@ TWITTER_API_KEY=your_twitterapi_io_api_key_here
 
 # Slack Integration  
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+
+# Discord Integration
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
 
 # Google Cloud
 GOOGLE_PROJECT_ID=your-google-project-id
@@ -204,10 +224,13 @@ filters:
   time_range_hours: 6  # How many hours back to search
 
 notify:
-  slack_channel: "#social-monitoring"  # Slack channel for notifications
+  # Choose one or both notification platforms:
+  slack_channel: "#social-monitoring"  # Slack channel for notifications (legacy)
+  discord_channel: "social-monitoring"  # Discord channel for notifications
+  channel: "#social-monitoring"        # Unified channel (works for both platforms)
 
 thresholds:
-  notify: 0.80  # Relevance score needed for Slack notifications (0.0-1.0)
+  notify: 0.80  # Relevance score needed for notifications (0.0-1.0)
   log_only: 0.60  # Relevance score needed for logging to sheets
 
 sheet:
@@ -223,8 +246,11 @@ Set up the following secrets in your GitHub repository (Settings → Secrets and
 |-------------|-------------|---------|
 | `TWITTER_API_KEY` | Your Twitter API .io API Key | `your-api-key-from-twitterapi-io` |
 | `SLACK_WEBHOOK_URL` | Slack incoming webhook URL | `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX` |
+| `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL | `https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN` |
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Service account JSON (minified) | `{"type":"service_account","project_id":"your-project"...}` |
 | `GOOGLE_PROJECT_ID` | Your Google Cloud project ID | `your-brand-listener-project` |
+
+**Note:** You need to configure at least one webhook URL (`SLACK_WEBHOOK_URL` or `DISCORD_WEBHOOK_URL`) for notifications to work. Both can be configured simultaneously to send notifications to multiple platforms.
 
 **To prepare the `GOOGLE_APPLICATION_CREDENTIALS_JSON` secret:**
 
@@ -259,7 +285,8 @@ Copy the minified JSON output and paste it as the value for the `GOOGLE_APPLICAT
 pnpm install
 
 # Set up environment
-cp .env.example .env
+# Create .env file with your credentials (see Environment Variables section below)
+cp .env.example .env  # If .env.example exists, or create manually
 # Edit .env with your credentials
 
 # Verify setup
@@ -373,6 +400,20 @@ Top Mentions:
 View full report: [Google Sheet Link]
 ```
 
+### Discord Notification Format
+
+Discord notifications use rich embeds with color coding:
+
+- **Green embeds** for mention notifications
+- **Orange embeds** for keyword notifications
+- **Red embeds** for failure notifications
+
+Each notification includes:
+- Tweet content and metadata
+- Author information and follower count
+- Direct links to tweets and profiles
+- Timestamps and relevance scores
+
 ## 🔧 Troubleshooting
 
 ### Common Issues
@@ -412,6 +453,26 @@ View full report: [Google Sheet Link]
 1. Verify all required secrets are set in GitHub
 2. Check that secret values don't have extra spaces or characters
 3. Review workflow logs for specific error messages
+
+#### "Discord webhook not working"
+
+**Problem**: Discord notifications are not being sent.
+
+**Solution**:
+1. Verify your Discord webhook URL is correct and active
+2. Check that the webhook has permission to post in the channel
+3. Ensure the `DISCORD_WEBHOOK_URL` secret is set correctly
+4. Test the webhook manually with a simple curl command
+
+#### "No notifications being sent"
+
+**Problem**: Neither Slack nor Discord notifications are working.
+
+**Solution**:
+1. Verify at least one webhook URL is configured (`SLACK_WEBHOOK_URL` or `DISCORD_WEBHOOK_URL`)
+2. Check that the notification thresholds are appropriate
+3. Ensure tweets are being found and processed
+4. Review the application logs for specific error messages
 
 ### Debug Mode
 

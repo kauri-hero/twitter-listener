@@ -5,7 +5,7 @@ import { TwitterClient } from '@brand-listener/core/twitter';
 import { MentionsSource } from '@brand-listener/core/sources';
 import { KeywordsSource } from '@brand-listener/core/sources';
 import { TweetProcessor } from '@brand-listener/core/processing';
-import { SlackSink } from '@brand-listener/core/sinks';
+import { SlackSink, DiscordSink } from '@brand-listener/core/sinks';
 import { SheetsSink } from '@brand-listener/core/sinks/sheets';
 
 const logger = new Logger({ prefix: 'BrandListener' });
@@ -117,7 +117,7 @@ async function sendToSinks(processedTweets: any[], config: Config): Promise<void
   const notifyTweets = processedTweets.filter(t => t.shouldNotify);
   const logTweets = processedTweets.filter(t => t.shouldLog);
   
-  logger.substep('Processing results', `${notifyTweets.length} for Slack, ${logTweets.length} for Sheets`);
+  logger.substep('Processing results', `${notifyTweets.length} for notifications, ${logTweets.length} for Sheets`);
   
   if (processedTweets.length > 0) {
     const results = processedTweets.map((t, i) => ({
@@ -132,13 +132,16 @@ async function sendToSinks(processedTweets: any[], config: Config): Promise<void
     logger.table(results, ['#', 'Source', 'Author', 'Preview', 'Score', 'Notify', 'Log']);
   }
   
-  // Send to Slack
-  if (notifyTweets.length > 0) {
+  // Send to Slack (if configured)
+  const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+  const slackChannel = config.notify.slack_channel || config.notify.channel;
+  
+  if (notifyTweets.length > 0 && slackWebhookUrl && slackChannel) {
     try {
       logger.substep('📢 Sending to Slack', `${notifyTweets.length} notifications`);
       const slackSink = new SlackSink({
-        webhook_url: getEnvVar('SLACK_WEBHOOK_URL'),
-        channel: config.notify.slack_channel
+        webhook_url: slackWebhookUrl,
+        channel: slackChannel
       });
       
       const hits = notifyTweets.map(t => tweetToHit(t.tweet, t.source, config));
@@ -153,8 +156,40 @@ async function sendToSinks(processedTweets: any[], config: Config): Promise<void
     } catch (error) {
       logger.error('Slack delivery failed', error);
     }
+  } else if (notifyTweets.length > 0 && (!slackWebhookUrl || !slackChannel)) {
+    logger.substep('📢 Slack', 'Not configured - skipping');
   } else {
     logger.substep('📢 Slack', 'No tweets meet notification threshold');
+  }
+  
+  // Send to Discord (if configured)
+  const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const discordChannel = config.notify.discord_channel || config.notify.channel;
+  
+  if (notifyTweets.length > 0 && discordWebhookUrl) {
+    try {
+      logger.substep('🎮 Sending to Discord', `${notifyTweets.length} notifications`);
+      const discordSink = new DiscordSink({
+        webhook_url: discordWebhookUrl,
+        channel: discordChannel
+      });
+      
+      const hits = notifyTweets.map(t => tweetToHit(t.tweet, t.source, config));
+      const results = await discordSink.sendHits(hits);
+      const batchResult = results[0]; // Single batched result
+      
+      if (batchResult?.success) {
+        logger.success(`Discord batch notification sent`, `${notifyTweets.length} tweets in 1 message`);
+      } else {
+        logger.error(`Discord batch failed`, batchResult?.error || 'Unknown error');
+      }
+    } catch (error) {
+      logger.error('Discord delivery failed', error);
+    }
+  } else if (notifyTweets.length > 0 && !discordWebhookUrl) {
+    logger.substep('🎮 Discord', 'Not configured - skipping');
+  } else {
+    logger.substep('🎮 Discord', 'No tweets meet notification threshold');
   }
   
   // Send to Sheets
@@ -182,9 +217,13 @@ async function sendToSinks(processedTweets: any[], config: Config): Promise<void
   }
   
   // Final summary
+  const notificationSummary = [];
+  if (slackWebhookUrl && slackChannel) notificationSummary.push('Slack');
+  if (discordWebhookUrl) notificationSummary.push('Discord');
+  
   logger.summary({
     'Total Processed': processedTweets.length,
-    'Slack Summary': notifyTweets.length > 0 ? '1 batched message' : 'None sent',
+    'Notifications': notifyTweets.length > 0 ? `${notificationSummary.join(', ')}` : 'None sent',
     'Sheet Logs': logTweets.length,
     'Mentions': processedTweets.filter(t => t.source === 'mentions').length,
     'Keywords': processedTweets.filter(t => t.source === 'keywords').length

@@ -55,6 +55,9 @@ TWITTER_API_KEY=your_twitterapi_io_api_key_here
 # Slack Integration
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
 
+# Discord Integration
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
+
 # Google Cloud Configuration
 GOOGLE_PROJECT_ID=your-google-project-id
 GOOGLE_APPLICATION_CREDENTIALS=./gcp-credentials.json
@@ -86,7 +89,9 @@ filters:
   time_range_hours: 2  # Start small for testing
 
 notify:
-  slack_channel: "#social-monitoring"
+  slack_channel: "#social-monitoring"  # Slack channel
+  discord_channel: "social-monitoring"  # Discord channel
+  channel: "#social-monitoring"  # Unified channel
 
 thresholds:
   notify: 0.80
@@ -116,6 +121,7 @@ echo "1. 🔑 Set up authentication:"
 echo "   • Get Twitter API .io key: https://twitterapi.io/"
 echo "   • Set up Google Cloud: https://console.cloud.google.com/"
 echo "   • Create Slack webhook: https://api.slack.com/apps"
+echo "   • Create Discord webhook: https://support.discord.com/hc/en-us/articles/228383668"
 echo ""
 echo "2. ⚙️  Configure your monitoring:"
 echo "   • Edit .env with your API credentials"

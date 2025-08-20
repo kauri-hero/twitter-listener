@@ -4,9 +4,16 @@
 
 export function validateEnvVars(): void {
   const requiredVars = [
-    'TWITTER_API_KEY',
-    'SLACK_WEBHOOK_URL'
+    'TWITTER_API_KEY'
   ];
+  
+  // Check for at least one webhook URL
+  const slackWebhook = process.env.SLACK_WEBHOOK_URL;
+  const discordWebhook = process.env.DISCORD_WEBHOOK_URL;
+  
+  if (!slackWebhook && !discordWebhook) {
+    requiredVars.push('SLACK_WEBHOOK_URL or DISCORD_WEBHOOK_URL');
+  }
   
   const missing = requiredVars.filter(varName => !process.env[varName]);
   
