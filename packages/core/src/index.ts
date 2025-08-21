@@ -1,4 +1,4 @@
-// Twitter client
+// Twitter
 export { TwitterClient } from './services/twitter/client';
 
 // Sources
@@ -9,7 +9,7 @@ export type { MentionsSourceConfig, KeywordsSourceConfig } from './services/sour
 export { TweetProcessor } from './services/processing/processor';
 
 // Sinks
-export { SlackSink, SheetsSink } from './services/sinks';
+export { SlackSink, SheetsSink, DiscordSink } from './services/sinks';
 
 // Config
 export { loadConfig } from './config';

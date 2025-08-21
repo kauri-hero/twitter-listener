@@ -3,18 +3,25 @@
 # Uses Twitter API .io for data access
 
 brand:
-  handles: ["yourbrand", "yourcompany"]  # Twitter handles to monitor (without @)
-  keywords: ["your product", "your company name", "your service"]  # Keywords to search for
+  handles: ["yourhandle", "yourbrand"]  # Twitter handles to monitor (without @)
+  # Note: Empty strings like [""] will be ignored. Use [] to disable mentions monitoring.
+  
+  keywords: ["your product", "your company"]  # Keywords to search for
+  # Note: Empty strings like [""] will be ignored. Use [] to disable keyword monitoring.
+  # At least one valid handle or keyword is required.
 
 filters:
   lang: "en"  # Language filter for tweets (en, es, fr, de, etc.)
   time_range_hours: 6  # How many hours back to search (start with 2-6 for testing)
 
 notify:
-  slack_channel: "#social-monitoring"  # Slack channel for notifications
+  # Choose one or both notification platforms:
+  slack_channel: "#social-monitoring"  # Slack channel for notifications (legacy)
+  discord_channel: "social-monitoring"  # Discord channel for notifications
+  channel: "#social-monitoring"        # Unified channel (works for both platforms)
 
 thresholds:
-  notify: 0.80  # Relevance score needed for Slack notifications (0.0-1.0, higher = less noise)
+  notify: 0.80  # Relevance score needed for notifications (0.0-1.0, higher = less noise)
   log_only: 0.60  # Relevance score needed for logging to sheets (0.0-1.0)
 
 sheet:

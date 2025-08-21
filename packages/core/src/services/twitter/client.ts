@@ -16,12 +16,30 @@ RawTweetApiResponseSchema
 export class TwitterClient {
   private readonly apiKey: string;
   private readonly baseUrl = 'https://api.twitterapi.io';
+  private lastRequestTime = 0;
+  private readonly rateLimitDelay = 6000; // 6 seconds in milliseconds
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
   }
 
+  private async enforceRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.rateLimitDelay) {
+      const delayNeeded = this.rateLimitDelay - timeSinceLastRequest;
+      console.log(`⏳ Rate limiting: waiting ${delayNeeded}ms before next request`);
+      await new Promise(resolve => setTimeout(resolve, delayNeeded));
+    }
+    
+    this.lastRequestTime = Date.now();
+  }
+
   private async makeRequest(url: string): Promise<unknown> {
+    // Enforce rate limiting before making the request
+    await this.enforceRateLimit();
+    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -63,7 +81,7 @@ export class TwitterClient {
 
     const apiResponse = RawTweetApiResponseSchema.parse(rawData);
     
-    const next_cursor = apiResponse.next_cursor;
+    const next_cursor = apiResponse.next_cursor || undefined; // Convert null to undefined
     const mentions = apiResponse.tweets;
 
     return {
@@ -98,7 +116,7 @@ export class TwitterClient {
     const apiResponse = RawTweetApiResponseSchema.parse(rawData);
     
     const tweets = apiResponse.tweets;
-    const next_cursor = apiResponse.next_cursor;
+    const next_cursor = apiResponse.next_cursor || undefined; // Convert null to undefined
     
     
     return {

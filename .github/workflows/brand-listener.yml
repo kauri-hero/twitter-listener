@@ -55,6 +55,7 @@ jobs:
         env:
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
           NODE_ENV: production
         run: |
@@ -79,12 +80,11 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-      - name: Notify on failure
+      - name: Notify on failure (Slack)
         if: failure() && github.event_name == 'schedule'
         uses: 8398a7/action-slack@v3
         with:
           status: failure
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           text: |
             🚨 Brand Listener scheduled run failed!
             
@@ -94,3 +94,45 @@ jobs:
             - View logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify on failure (Discord)
+        if: failure() && github.event_name == 'schedule'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{
+                   "content": "🚨 Brand Listener scheduled run failed!",
+                   "embeds": [{
+                     "title": "Workflow Failure",
+                     "description": "The Brand Listener scheduled run has failed",
+                     "color": 16711680,
+                     "fields": [
+                       {
+                         "name": "Run Number",
+                         "value": "${{ github.run_number }}",
+                         "inline": true
+                       },
+                       {
+                         "name": "Time",
+                         "value": "${{ github.event.head_commit.timestamp }}",
+                         "inline": true
+                       },
+                       {
+                         "name": "View Logs",
+                         "value": "[Click here to view logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+                         "inline": false
+                       }
+                     ],
+                     "footer": {
+                       "text": "Brand Listener - GitHub Actions"
+                     },
+                     "timestamp": "${{ github.event.head_commit.timestamp }}"
+                   }]
+                 }' \
+                 "$DISCORD_WEBHOOK_URL"
+          else
+            echo "Discord webhook URL not configured, skipping Discord notification"
+          fi

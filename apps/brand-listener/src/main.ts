@@ -5,7 +5,7 @@ import { TwitterClient } from '@brand-listener/core/twitter';
 import { MentionsSource } from '@brand-listener/core/sources';
 import { KeywordsSource } from '@brand-listener/core/sources';
 import { TweetProcessor } from '@brand-listener/core/processing';
-import { SlackSink } from '@brand-listener/core/sinks';
+import { SlackSink, DiscordSink } from '@brand-listener/core/sinks';
 import { SheetsSink } from '@brand-listener/core/sinks/sheets';
 
 const logger = new Logger({ prefix: 'BrandListener' });
@@ -28,9 +28,14 @@ async function main(): Promise<void> {
     logger.step('1️⃣', 'Setup & Configuration');
     validateEnvVars();
     const appConfig = await loadConfig('config.yaml');
+    
+    // Filter out empty strings from handles and keywords
+    const validHandles = appConfig.brand.handles.filter(handle => handle && handle.trim() !== '');
+    const validKeywords = appConfig.brand.keywords.filter(keyword => keyword && keyword.trim() !== '');
+    
     logger.success('Configuration loaded', {
-      handles: appConfig.brand.handles,
-      keywords: appConfig.brand.keywords,
+      handles: validHandles.length > 0 ? validHandles : 'None (empty strings filtered out)',
+      keywords: validKeywords.length > 0 ? validKeywords : 'None (empty strings filtered out)',
       timeRange: `${appConfig.filters.time_range_hours}h`,
       thresholds: appConfig.thresholds
     });
@@ -46,17 +51,39 @@ async function main(): Promise<void> {
     // 3. Collect from sources
     logger.step('3️⃣', 'Collect Tweets from Sources');
     
-    const [mentionTweets, keywordTweets] = await Promise.all([
-      mentionsSource.getTweets({
-        handles: appConfig.brand.handles,
-        timeRangeHours: appConfig.filters.time_range_hours || 2
-      }),
-      keywordsSource.getTweets({
-        keywords: appConfig.brand.keywords,
-        language: appConfig.filters.lang,
-        timeRangeHours: appConfig.filters.time_range_hours || 2
-      })
-    ]);
+    let mentionTweets: Tweet[] = [];
+    let keywordTweets: Tweet[] = [];
+    
+    // Only fetch mentions if we have valid handles
+    if (validHandles.length > 0) {
+      try {
+        mentionTweets = await mentionsSource.getTweets({
+          handles: validHandles,
+          timeRangeHours: appConfig.filters.time_range_hours || 2
+        });
+      } catch (error) {
+        logger.error('Failed to fetch mentions', error);
+        mentionTweets = []; // Continue with empty array
+      }
+    } else {
+      logger.substep('📧 Mentions', 'Skipped - no valid handles configured');
+    }
+    
+    // Only fetch keywords if we have valid keywords
+    if (validKeywords.length > 0) {
+      try {
+        keywordTweets = await keywordsSource.getTweets({
+          keywords: validKeywords,
+          language: appConfig.filters.lang,
+          timeRangeHours: appConfig.filters.time_range_hours || 2
+        });
+      } catch (error) {
+        logger.error('Failed to fetch keywords', error);
+        keywordTweets = []; // Continue with empty array
+      }
+    } else {
+      logger.substep('🔍 Keywords', 'Skipped - no valid keywords configured');
+    }
     
     logger.info('Tweet collection complete', {
       mentions: mentionTweets.length,
@@ -103,7 +130,7 @@ async function main(): Promise<void> {
     
     // 5. Send to sinks
     logger.step('5️⃣', 'Send to Destinations');
-    await sendToSinks(processedTweets, appConfig);
+    await sendToSinks(processedTweets, appConfig, validHandles, validKeywords);
     
     logger.success('Brand listening cycle complete!');
     
@@ -113,11 +140,11 @@ async function main(): Promise<void> {
   }
 }
 
-async function sendToSinks(processedTweets: any[], config: Config): Promise<void> {
+async function sendToSinks(processedTweets: any[], config: Config, validHandles: string[], validKeywords: string[]): Promise<void> {
   const notifyTweets = processedTweets.filter(t => t.shouldNotify);
   const logTweets = processedTweets.filter(t => t.shouldLog);
   
-  logger.substep('Processing results', `${notifyTweets.length} for Slack, ${logTweets.length} for Sheets`);
+  logger.substep('Processing results', `${notifyTweets.length} for notifications, ${logTweets.length} for Sheets`);
   
   if (processedTweets.length > 0) {
     const results = processedTweets.map((t, i) => ({
@@ -132,16 +159,19 @@ async function sendToSinks(processedTweets: any[], config: Config): Promise<void
     logger.table(results, ['#', 'Source', 'Author', 'Preview', 'Score', 'Notify', 'Log']);
   }
   
-  // Send to Slack
-  if (notifyTweets.length > 0) {
+  // Send to Slack (if configured)
+  const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+  const slackChannel = config.notify.slack_channel || config.notify.channel;
+  
+  if (notifyTweets.length > 0 && slackWebhookUrl && slackChannel) {
     try {
       logger.substep('📢 Sending to Slack', `${notifyTweets.length} notifications`);
       const slackSink = new SlackSink({
-        webhook_url: getEnvVar('SLACK_WEBHOOK_URL'),
-        channel: config.notify.slack_channel
+        webhook_url: slackWebhookUrl,
+        channel: slackChannel
       });
       
-      const hits = notifyTweets.map(t => tweetToHit(t.tweet, t.source, config));
+      const hits = notifyTweets.map(t => tweetToHit(t.tweet, t.source, config, validHandles, validKeywords));
       const results = await slackSink.sendHits(hits);
       const batchResult = results[0]; // Single batched result
       
@@ -153,8 +183,40 @@ async function sendToSinks(processedTweets: any[], config: Config): Promise<void
     } catch (error) {
       logger.error('Slack delivery failed', error);
     }
+  } else if (notifyTweets.length > 0 && (!slackWebhookUrl || !slackChannel)) {
+    logger.substep('📢 Slack', 'Not configured - skipping');
   } else {
     logger.substep('📢 Slack', 'No tweets meet notification threshold');
+  }
+  
+  // Send to Discord (if configured)
+  const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const discordChannel = config.notify.discord_channel || config.notify.channel;
+  
+  if (notifyTweets.length > 0 && discordWebhookUrl) {
+    try {
+      logger.substep('🎮 Sending to Discord', `${notifyTweets.length} notifications`);
+      const discordSink = new DiscordSink({
+        webhook_url: discordWebhookUrl,
+        channel: discordChannel
+      });
+      
+      const hits = notifyTweets.map(t => tweetToHit(t.tweet, t.source, config, validHandles, validKeywords));
+      const results = await discordSink.sendHits(hits);
+      const batchResult = results[0]; // Single batched result
+      
+      if (batchResult?.success) {
+        logger.success(`Discord batch notification sent`, `${notifyTweets.length} tweets in 1 message`);
+      } else {
+        logger.error(`Discord batch failed`, batchResult?.error || 'Unknown error');
+      }
+    } catch (error) {
+      logger.error('Discord delivery failed', error);
+    }
+  } else if (notifyTweets.length > 0 && !discordWebhookUrl) {
+    logger.substep('🎮 Discord', 'Not configured - skipping');
+  } else {
+    logger.substep('🎮 Discord', 'No tweets meet notification threshold');
   }
   
   // Send to Sheets
@@ -166,7 +228,7 @@ async function sendToSinks(processedTweets: any[], config: Config): Promise<void
         sheetName: config.sheet.sheetName
       });
       
-      const hits = logTweets.map(t => tweetToHit(t.tweet, t.source, config));
+      const hits = logTweets.map(t => tweetToHit(t.tweet, t.source, config, validHandles, validKeywords));
       const result = await sheetsSink.appendHits(hits);
       
       if (result.success) {
@@ -182,18 +244,22 @@ async function sendToSinks(processedTweets: any[], config: Config): Promise<void
   }
   
   // Final summary
+  const notificationSummary = [];
+  if (slackWebhookUrl && slackChannel) notificationSummary.push('Slack');
+  if (discordWebhookUrl) notificationSummary.push('Discord');
+  
   logger.summary({
     'Total Processed': processedTweets.length,
-    'Slack Summary': notifyTweets.length > 0 ? '1 batched message' : 'None sent',
+    'Notifications': notifyTweets.length > 0 ? `${notificationSummary.join(', ')}` : 'None sent',
     'Sheet Logs': logTweets.length,
     'Mentions': processedTweets.filter(t => t.source === 'mentions').length,
     'Keywords': processedTweets.filter(t => t.source === 'keywords').length
   });
 }
 
-function tweetToHit(tweet: Tweet, source: string, config: Config): any {
+function tweetToHit(tweet: Tweet, source: string, config: Config, validHandles: string[], validKeywords: string[]): any {
   // Extract actual terms that caused the hit from config
-  const explicitTerms = getExplicitTermsFromConfig(tweet, source, config);
+  const explicitTerms = getExplicitTermsFromConfig(tweet, source, config, validHandles, validKeywords);
   
   return {
     run_id: 'clean-' + Date.now(),
@@ -217,12 +283,12 @@ function tweetToHit(tweet: Tweet, source: string, config: Config): any {
   };
 }
 
-function getExplicitTermsFromConfig(tweet: Tweet, source: string, config: Config): string[] {
+function getExplicitTermsFromConfig(tweet: Tweet, source: string, config: Config, validHandles: string[], validKeywords: string[]): string[] {
   const tweetText = tweet.text.toLowerCase();
   
   if (source === 'mentions') {
     // For mentions, find which configured handles are actually mentioned
-    const mentionedHandles = config.brand.handles.filter(handle => {
+    const mentionedHandles = validHandles.filter(handle => {
       const handlePattern = new RegExp(`@${handle.toLowerCase()}\\b`, 'i');
       return handlePattern.test(tweetText);
     });
@@ -231,7 +297,7 @@ function getExplicitTermsFromConfig(tweet: Tweet, source: string, config: Config
   
   if (source === 'keywords') {
     // For keywords, find which configured keywords are actually present
-    const foundKeywords = config.brand.keywords.filter(keyword => {
+    const foundKeywords = validKeywords.filter(keyword => {
       const keywordLower = keyword.toLowerCase();
       return tweetText.includes(keywordLower);
     });

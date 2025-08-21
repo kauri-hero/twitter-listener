@@ -13,6 +13,12 @@ export interface SlackSinkConfig {
   channel: string;
 }
 
+export interface DiscordSinkConfig {
+  webhookUrl?: string;
+  webhook_url?: string; // Support both naming conventions
+  channel?: string; // Optional for Discord (webhook is channel-specific)
+}
+
 // Sink Result Types
 export interface SinkResult {
   success: boolean;
@@ -49,4 +55,28 @@ export interface SlackBlock {
   elements?: any[];
   image_url?: string;
   alt_text?: string;
+}
+
+// Discord Message Types
+export interface DiscordMessagePayload {
+  content?: string;
+  embeds?: DiscordEmbed[];
+  username?: string;
+  avatar_url?: string;
+}
+
+export interface DiscordEmbed {
+  title?: string;
+  description?: string;
+  color?: number;
+  fields?: DiscordField[];
+  thumbnail?: { url: string };
+  footer?: { text: string };
+  timestamp?: string;
+}
+
+export interface DiscordField {
+  name: string;
+  value: string;
+  inline?: boolean;
 }
