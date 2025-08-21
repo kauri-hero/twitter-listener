@@ -143,7 +143,7 @@ export class SlackSink {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `• *${hit.author_name}* (@${hit.author_username})`
+            text: `• *${hit.author_name}* (@${hit.author_username})\n> ${this.truncateText(hit.text, 150)}`
           },
           accessory: {
             type: 'button',
@@ -168,7 +168,7 @@ export class SlackSink {
       }
     }
 
-    // Add top keywords (max 3)
+    // Add top keywords (max 5)
     if (keywordHits.length > 0) {
       blocks.push({
         type: 'section',
@@ -178,7 +178,7 @@ export class SlackSink {
         }
       });
 
-      keywordHits.slice(0, 3).forEach(hit => {
+      keywordHits.slice(0, 5).forEach(hit => {
         blocks.push({
           type: 'section',
           text: {
@@ -189,19 +189,20 @@ export class SlackSink {
             type: 'button',
             text: {
               type: 'plain_text',
-              text: '🔗 View'
+              text: '🔗 View Tweet'
             },
-            url: hit.tweet_url
+            url: hit.tweet_url,
+            style: 'primary'
           }
         });
       });
 
-      if (keywordHits.length > 3) {
+      if (keywordHits.length > 5) {
         blocks.push({
           type: 'context',
           elements: [{
             type: 'mrkdwn',
-            text: `... and ${keywordHits.length - 3} more keyword mentions`
+            text: `... and ${keywordHits.length - 5} more keyword mentions`
           }]
         });
       }

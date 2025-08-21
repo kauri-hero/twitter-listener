@@ -125,13 +125,13 @@ export class DiscordSink {
     // Add top mentions (max 5)
     if (mentionHits.length > 0) {
       const mentionText = mentionHits.slice(0, 5).map(hit => 
-        `• **${hit.author_name}** (@${hit.author_username})`
-      ).join('\n');
+        `• **${hit.author_name}** (@${hit.author_username})\n> ${this.truncateText(hit.text, 150)}`
+      ).join('\n\n');
       
       if (mentionHits.length > 5) {
         embed.fields!.push({
           name: `📧 Recent Handle Mentions (${mentionHits.length})`,
-          value: mentionText + `\n... and ${mentionHits.length - 5} more mentions`,
+          value: mentionText + `\n\n... and ${mentionHits.length - 5} more mentions`,
           inline: false
         });
       } else {
@@ -143,16 +143,16 @@ export class DiscordSink {
       }
     }
 
-    // Add top keywords (max 3)
+    // Add top keywords (max 5)
     if (keywordHits.length > 0) {
-      const keywordText = keywordHits.slice(0, 3).map(hit => 
+      const keywordText = keywordHits.slice(0, 5).map(hit => 
         `• **${hit.author_name}** (@${hit.author_username})\n> ${this.truncateText(hit.text, 150)}`
       ).join('\n\n');
       
-      if (keywordHits.length > 3) {
+      if (keywordHits.length > 5) {
         embed.fields!.push({
           name: `🔍 Recent Keyword mentions (${keywordHits.length})`,
-          value: keywordText + `\n\n... and ${keywordHits.length - 3} more keyword mentions`,
+          value: keywordText + `\n\n... and ${keywordHits.length - 5} more keyword mentions`,
           inline: false
         });
       } else {
@@ -164,8 +164,20 @@ export class DiscordSink {
       }
     }
 
+    // Build content with tweet URLs
+    let content = `Brand Monitoring: ${totalHits} new mentions found`;
+    
+    // Add tweet URLs for the first 5 results
+    const allHits = [...mentionHits, ...keywordHits].slice(0, 5);
+    if (allHits.length > 0) {
+      content += '\n\n**🔗 Tweet Links:**';
+      allHits.forEach((hit, index) => {
+        content += `\n${index + 1}. [@${hit.author_username}](${hit.tweet_url})`;
+      });
+    }
+
     return {
-      content: `Brand Monitoring: ${totalHits} new mentions found`,
+      content: content,
       embeds: [embed]
     };
   }
